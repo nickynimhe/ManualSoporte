@@ -109,6 +109,27 @@ def debug():
     except Exception as e:
         return f"❌ Error: {str(e)}"
 
+
+@app.route('/test-db')
+def test_db():
+    try:
+        from database import crear_conexion
+        conexion = crear_conexion()
+        if conexion:
+            cursor = conexion.cursor()
+            cursor.execute("SELECT version()")
+            version = cursor.fetchone()
+            cursor.execute("SELECT COUNT(*) FROM usuarios")
+            usuarios = cursor.fetchone()[0]
+            cursor.close()
+            conexion.close()
+            return f"✅ PostgreSQL OK. Versión: {version[0]}. Usuarios: {usuarios}"
+        else:
+            return "❌ No se pudo conectar a PostgreSQL"
+    except Exception as e:
+        return f"❌ Error: {str(e)}"
+        
+
 # Inyectar función de permisos a todos los templates
 @app.context_processor
 def inject_permissions():
