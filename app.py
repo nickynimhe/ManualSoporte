@@ -16,6 +16,78 @@ login_manager.init_app(app)
 login_manager.login_view = 'login'
 login_manager.login_message = 'Por favor inicia sesión para acceder a esta página.'
 
+# Función para inicializar datos en la base de datos
+def inicializar_datos():
+    conexion = crear_conexion()
+    if conexion:
+        try:
+            cursor = conexion.cursor(dictionary=True)
+            
+            # Verificar si ya existen datos
+            cursor.execute("SELECT COUNT(*) as count FROM usuarios")
+            usuarios_count = cursor.fetchone()['count']
+            
+            cursor.execute("SELECT COUNT(*) as count FROM fichas")
+            fichas_count = cursor.fetchone()['count']
+            
+            # Si no hay datos, insertar los datos iniciales
+            if usuarios_count == 0:
+                print("Inicializando datos de usuarios...")
+                
+                # Insertar usuarios
+                usuarios_data = [
+                    ('admin', 'scrypt:32768:8:1$GYLitI11BqRpnnNx$3adb3a1bf184477ed191740551bacc0554b711f78d020526a6a63fbb97562da618e5ce5ef2b2af88eae7015aa202672e22f452568aee17b2f289d34aaad96646', 'admin'),
+                    ('asesor', 'scrypt:32768:8:1$y4mBv6yET3dE1AOG$a0f2ae79026b6d3accb5bd80c610f8c6c0bc1fbc70d11b8b5825188947a64abe24114f439b89f935f704416d7bc6868e37920714c8177a7eb2276c3f61095b6e', 'asesor')
+                ]
+                
+                permisos_base = json.dumps({
+                    "ver_fichas": True,
+                    "agregar_fichas": False,
+                    "editar_fichas": False,
+                    "eliminar_fichas": False,
+                    "cambiar_password": True
+                })
+                
+                for usuario, password, rol in usuarios_data:
+                    cursor.execute(
+                        "INSERT INTO usuarios (usuario, password, rol, permisos) VALUES (%s, %s, %s, %s)",
+                        (usuario, password, rol, permisos_base)
+                    )
+                
+                print("Usuarios iniciales creados")
+            
+            if fichas_count == 0:
+                print("Inicializando datos de fichas...")
+                
+                # Insertar fichas de ejemplo
+                fichas_data = [
+                    ('TV', 'No hay señal en el televisor', 'Usuario indica que el televisor no muestra ningún canal, aparece en pantalla negra o con el mensaje sin señal.', 'Micronodo/CATV alarmado, apagado|Problemas con el decodificador', 'Encender el CATV.|Validar que el Micronodo no esté alarmado.|Confirmar que CATV y Micronodo estén conectados correctamente.|Verificar que el decodificador esté programado adecuadamente.', 'Sin señal, CATV, Micronodo, Decodificador'),
+                    ('TV', 'Imagen pixelada o con interferencias', 'Usuario indica que la imagen se ve con cuadritos, borrosa, congelada o con rayas', 'Cable de señal dañado|Problemas con la antena/servicio|Reprogramacion mal ejecutada', 'Validar si el inconveniente no corresponde al proveedor.|Indicar al usuario que reprograme en modo Aire/Antena.|Brindar el paso a paso para la reprogramación.|Si persiste la falla, generar orden de servicio en Softv para enviar personal técnico.', 'Pixeleado, lluvioso, intermitencia'),
+                    ('Internet', 'Internet lento o intermitente', 'Usuario indica que la conexión se cae constantemente o que la velocidad es muy baja.', 'Congestión de la red|Potencias mayores a -27', 'Validar potencias del módem.|Realizar Reboot en Vortex y esperar 1 minuto.|Ejecutar Resync Config en Vortex y esperar 1 minuto.|Indicar al usuario desconectar el módem por 3 minutos.', 'Lento, Intermitente'),
+                    ('Internet', 'Sin conexión a internet', 'Usuario indica que no puede navegar en ningún dispositivo y aparece como sin acceso a la red, tiene un LED rojo encendido.', 'Router/módem apagado|patchcord desconectado/Dañado', 'Habilitar nuevamente el módem en Vortex.|Si presenta LOS, generar orden de falla en Softv para enviar personal técnico.', 'LOS , Modem'),
+                    ('Equipo', 'Equipo no enciende', 'Usuario indica que el dispositivo no prende ni muestra luces aunque esté conectado a la corriente.', 'Cargador del modem desconectado|Boton OFF/ON Sin presionar', 'Indicar al usuario validar el cableado del cargador del módem.|Sugerir conectarlo en otra toma de corriente.|Realizar Resync Config en Vortex y esperar que el equipo cambie de estado.|Recomendar revisar el botón trasero del módem.|Si persiste la falla, generar orden en Softv para enviar personal técnico.', 'Apagado, No enciende, Modem')
+                ]
+                
+                for categoria, problema, descripcion, causas, solucion, palabras_clave in fichas_data:
+                    cursor.execute(
+                        "INSERT INTO fichas (categoria, problema, descripcion, causas, solucion, palabras_clave) VALUES (%s, %s, %s, %s, %s, %s)",
+                        (categoria, problema, descripcion, causas, solucion, palabras_clave)
+                    )
+                
+                print("Fichas iniciales creadas")
+            
+            conexion.commit()
+            print("Base de datos inicializada correctamente")
+            
+        except mysql.connector.Error as e:
+            print(f"Error al inicializar datos: {e}")
+            conexion.rollback()
+        finally:
+            cursor.close()
+            conexion.close()
+    else:
+        print("No se pudo conectar a la base de datos para inicializar")
+
 @app.context_processor
 def inject_now():
     return {'now': datetime.now()}
@@ -1035,7 +1107,11 @@ def obtener_problemas(categoria):
     problemas = problemas_por_categoria.get(categoria, [])
     return jsonify(problemas)
 
+
 if __name__ == '__main__':
     with app.app_context():
+        # Crear tablas si no existen
         crear_tablas()
+        # Inicializar datos si la base de datos está vacía
+        inicializar_datos()
     app.run(host='0.0.0.0', port=5000)
