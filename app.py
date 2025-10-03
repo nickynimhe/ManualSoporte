@@ -3,8 +3,7 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from database import crear_conexion, crear_tablas
 from config import Config
 from werkzeug.security import check_password_hash, generate_password_hash
-import psycopg2
-from psycopg2.extras import RealDictCursor
+import mysql.connector
 import json
 from datetime import datetime
 
@@ -56,7 +55,7 @@ def load_user(user_id):
     conexion = crear_conexion()
     if conexion:
         try:
-            cursor = conexion.cursor(cursor_factory=RealDictCursor)
+            cursor = conexion.cursor(dictionary=True)
             cursor.execute("SELECT * FROM usuarios WHERE id = %s", (user_id,))
             user_data = cursor.fetchone()
             if user_data:
@@ -74,7 +73,7 @@ def load_user(user_id):
                     user_data['rol'],
                     permisos
                 )
-        except psycopg2.Error as e:
+        except mysql.connector.Error as e:
             print(f"Error: {e}")
         finally:
             cursor.close()
@@ -108,7 +107,7 @@ def login():
         conexion = crear_conexion()
         if conexion:
             try:
-                cursor = conexion.cursor(cursor_factory=RealDictCursor)
+                cursor = conexion.cursor(dictionary=True)
                 cursor.execute("SELECT * FROM usuarios WHERE usuario = %s", (usuario,))
                 user_data = cursor.fetchone()
                 
@@ -576,7 +575,7 @@ def cambiar_password():
         conexion = crear_conexion()
         if conexion:
             try:
-                cursor = conexion.cursor(cursor_factory=RealDictCursor)
+                cursor = conexion.cursor(dictionary=True)
                 cursor.execute("SELECT password FROM usuarios WHERE id = %s", (current_user.id,))
                 usuario = cursor.fetchone()
                 
@@ -593,7 +592,7 @@ def cambiar_password():
                 else:
                     flash('La contraseña actual es incorrecta', 'error')
                     
-            except psycopg2.Error as e:
+            except mysql.connector.Error as e:
                 flash('Error al cambiar la contraseña', 'error')
                 print(f"Error: {e}")
             finally:
@@ -614,7 +613,7 @@ def gestion_usuarios():
     usuarios = []
     if conexion:
         try:
-            cursor = conexion.cursor(cursor_factory=RealDictCursor)
+            cursor = conexion.cursor(dictionary=True)
             cursor.execute("SELECT * FROM usuarios ORDER BY fecha_creacion DESC")
             usuarios = cursor.fetchall()
             
@@ -628,7 +627,7 @@ def gestion_usuarios():
                 else:
                     usuario['permisos_parsed'] = {}
                     
-        except psycopg2.Error as e:
+        except mysql.connector.Error as e:
             flash('Error al cargar los usuarios', 'error')
             print(f"Error: {e}")
         finally:
@@ -649,7 +648,7 @@ def editar_usuario(id):
     usuario_data = None
     if conexion:
         try:
-            cursor = conexion.cursor(cursor_factory=RealDictCursor)
+            cursor = conexion.cursor(dictionary=True)
             
             if request.method == 'POST':
                 usuario = request.form['usuario']
@@ -697,7 +696,7 @@ def editar_usuario(id):
             
         except psycopg2.IntegrityError:
             flash('El usuario ya existe', 'error')
-        except psycopg2.Error as e:
+        except mysql.connector.Error as e:
             flash('Error al editar el usuario', 'error')
             print(f"Error: {e}")
         finally:
@@ -752,7 +751,7 @@ def agregar_usuario():
                 return redirect(url_for('gestion_usuarios'))
             except psycopg2.IntegrityError:
                 flash('El usuario ya existe', 'error')
-            except psycopg2.Error as e:
+            except mysql.connector.Error as e:
                 flash('Error al agregar el usuario', 'error')
                 print(f"Error: {e}")
             finally:
@@ -780,7 +779,7 @@ def eliminar_usuario(id):
             cursor.execute("DELETE FROM usuarios WHERE id = %s", (id,))
             conexion.commit()
             flash('Usuario eliminado correctamente', 'success')
-        except psycopg2.Error as e:
+        except mysql.connector.Error as e:
             flash('Error al eliminar el usuario', 'error')
             print(f"Error: {e}")
         finally:
@@ -801,10 +800,10 @@ def index():
     fichas = []
     if conexion:
         try:
-            cursor = conexion.cursor(cursor_factory=RealDictCursor)
+            cursor = conexion.cursor(dictionary=True)
             cursor.execute("SELECT * FROM fichas ORDER BY fecha_actualizacion DESC")
             fichas = cursor.fetchall()
-        except psycopg2.Error as e:
+        except mysql.connector.Error as e:
             flash('Error al cargar las fichas', 'error')
             print(f"Error: {e}")
         finally:
@@ -849,7 +848,7 @@ def agregar_ficha():
                 conexion.commit()
                 flash('Ficha agregada correctamente', 'success')
                 return redirect(url_for('index'))
-            except psycopg2.Error as e:
+            except mysql.connector.Error as e:
                 flash('Error al agregar la ficha', 'error')
                 print(f"Error: {e}")
             finally:
@@ -869,7 +868,7 @@ def editar_ficha(id):
     ficha = None
     if conexion:
         try:
-            cursor = conexion.cursor(cursor_factory=RealDictCursor)
+            cursor = conexion.cursor(dictionary=True)
             
             if request.method == 'POST':
                 categoria = request.form['categoria']
@@ -902,7 +901,7 @@ def editar_ficha(id):
             if ficha and ficha['causas']:
                 ficha['causas'] = ficha['causas'].replace('|', '\n')
             
-        except psycopg2.Error as e:
+        except mysql.connector.Error as e:
             flash('Error al cargar/editar la ficha', 'error')
             print(f"Error: {e}")
         finally:
@@ -929,7 +928,7 @@ def eliminar_ficha(id):
             cursor.execute("DELETE FROM fichas WHERE id = %s", (id,))
             conexion.commit()
             flash('Ficha eliminada correctamente', 'success')
-        except psycopg2.Error as e:
+        except mysql.connector.Error as e:
             flash('Error al eliminar la ficha', 'error')
             print(f"Error: {e}")
         finally:
@@ -952,7 +951,7 @@ def buscar():
     fichas = []
     if conexion:
         try:
-            cursor = conexion.cursor(cursor_factory=RealDictCursor)
+            cursor = conexion.cursor(dictionary=True)
             
             if categoria and query:
                 sql = "SELECT * FROM fichas WHERE categoria = %s AND (problema LIKE %s OR palabras_clave LIKE %s)"
@@ -967,7 +966,7 @@ def buscar():
                 cursor.execute("SELECT * FROM fichas ORDER BY fecha_actualizacion DESC")
             
             fichas = cursor.fetchall()
-        except psycopg2.Error as e:
+        except mysql.connector.Error as e:
             flash('Error en la búsqueda', 'error')
             print(f"Error: {e}")
         finally:
@@ -987,10 +986,10 @@ def ver_ficha(id):
     ficha = None
     if conexion:
         try:
-            cursor = conexion.cursor(cursor_factory=RealDictCursor)
+            cursor = conexion.cursor(dictionary=True)
             cursor.execute("SELECT * FROM fichas WHERE id = %s", (id,))
             ficha = cursor.fetchone()
-        except psycopg2.Error as e:
+        except mysql.connector.Error as e:
             flash('Error al cargar la ficha', 'error')
             print(f"Error: {e}")
         finally:
