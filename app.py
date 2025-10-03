@@ -3,7 +3,7 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from database import crear_conexion, crear_tablas
 from config import Config
 from werkzeug.security import check_password_hash, generate_password_hash
-import mysql.connector
+import psycopg2
 import json
 from datetime import datetime
 
@@ -21,14 +21,14 @@ def inicializar_datos():
     conexion = crear_conexion()
     if conexion:
         try:
-            cursor = conexion.cursor(dictionary=True)
+            cursor = conexion.cursor()
             
             # Verificar si ya existen datos
             cursor.execute("SELECT COUNT(*) as count FROM usuarios")
-            usuarios_count = cursor.fetchone()['count']
+            usuarios_count = cursor.fetchone()[0]  # PostgreSQL devuelve tupla
             
             cursor.execute("SELECT COUNT(*) as count FROM fichas")
-            fichas_count = cursor.fetchone()['count']
+            fichas_count = cursor.fetchone()[0]  # PostgreSQL devuelve tupla
             
             # Si no hay datos, insertar los datos iniciales
             if usuarios_count == 0:
