@@ -7,10 +7,10 @@ import json
 def crear_conexion():
     try:
         # Extraer la configuración de las variables de entorno
-        user = os.environ.get('MYSQL_USER')
-        password = os.environ.get('MYSQL_PASSWORD')
-        host = os.environ.get('MYSQL_HOST')
-        database = os.environ.get('MYSQL_DATABASE')
+        user = os.environ.get('soporte_tecnico_9sad_user')
+        password = os.environ.get('T56GYS3Oj5w4kGzrdlvAhlGfExjT0t7a')
+        host = os.environ.get('dpg-d3g1q2nfte5s73cjpiu0-a')
+        database = os.environ.get('soporte_tecnico_9sad')
 
         # Validar que las variables de entorno existan
         if not all([user, password, host, database]):
