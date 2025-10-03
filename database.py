@@ -1,58 +1,47 @@
 import psycopg2
 from werkzeug.security import generate_password_hash
 import json
+import time
 
 def crear_conexion():
-    try:
-        # Conexión DIRECTA con los valores de tu PostgreSQL
-        conexion = psycopg2.connect(
-            host='dpg-d3g1q2nqaa0ldt0j7vug-a.oregon-postgres.render.com',
-            database='soporte_tecnico_9sad',
-            user='soporte_tecnico_9sad_user',
-            password='T56GYS30j5w4k6zrdlvAh1GfExjT0t7a',
-            port='5432',
-            sslmode='require'
-        )
-        print("✅ Conexión a PostgreSQL exitosa")
-        return conexion
-        
-    except Exception as err:
-        print(f"❌ Error al conectar a PostgreSQL: {err}")
-        return None
-        
-        # Opción 2: Usar variables individuales
-        print("🔗 Intentando conexión via parámetros individuales...")
-        user = 'soporte_tecnico_9sad_user'
-        password = 'T56GYS30j5w4k6zrdlvAh1GfExjT0t7a'
-        host = 'dpg-d3g1q2nqaa0ldt0j7vug-a.oregon-postgres.render.com'
-        database = 'soporte_tecnico_9sad'
-        port = '5432'
-
-        conexion = psycopg2.connect(
-            host=host,
-            user=user,
-            password=password,
-            database=database,
-            port=port,
-            sslmode='require'
-        )
-        print("✅ Conexión a PostgreSQL exitosa via parámetros individuales")
-        return conexion
-        
-    except Exception as err:
-        print(f"❌ Error al conectar a PostgreSQL: {err}")
-        return None
+    max_intentos = 3
+    for intento in range(max_intentos):
+        try:
+            print(f"🔗 Intento {intento + 1} de conexión a PostgreSQL...")
+            
+            # Conexión DIRECTA - valores fijos
+            conexion = psycopg2.connect(
+                host='dpg-d3g1q2nqaa0ldt0j7vug-a.oregon-postgres.render.com',
+                database='soporte_tecnico_9sad',
+                user='soporte_tecnico_9sad_user',
+                password='T56GYS30j5w4k6zrdlvAh1GfExjT0t7a',
+                port=5432,
+                sslmode='require',
+                connect_timeout=10
+            )
+            
+            print("✅ ¡CONEXIÓN EXITOSA a PostgreSQL!")
+            return conexion
+            
+        except Exception as err:
+            print(f"❌ Intento {intento + 1} falló: {err}")
+            if intento < max_intentos - 1:
+                print("🔄 Reintentando en 3 segundos...")
+                time.sleep(3)
+            else:
+                print("💥 Todos los intentos de conexión fallaron")
+                return None
 
 def crear_tablas():
+    print("🔧 Iniciando creación de tablas...")
     conexion = crear_conexion()
     if not conexion:
-        print("❌ No se pudo conectar a la base de datos para crear las tablas.")
+        print("💥 No se pudo conectar para crear tablas")
         return False
 
     cursor = conexion.cursor()
-
     try:
-        # Crear tabla usuarios (sintaxis PostgreSQL)
+        # Tabla usuarios
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS usuarios (
                 id SERIAL PRIMARY KEY,
@@ -64,9 +53,9 @@ def crear_tablas():
                 fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
-        print("✅ Tabla 'usuarios' creada o ya existente.")
+        print("✅ Tabla 'usuarios' lista")
 
-        # Crear tabla fichas (sintaxis PostgreSQL)
+        # Tabla fichas
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS fichas (
                 id SERIAL PRIMARY KEY,
@@ -80,49 +69,38 @@ def crear_tablas():
                 fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
-        print("✅ Tabla 'fichas' creada o ya existente.")
+        print("✅ Tabla 'fichas' lista")
 
-        # Insertar usuarios por defecto si no existen
-        admin_pass = generate_password_hash('admin123')
-        asesor_pass = generate_password_hash('asesor123')
-        default_perms = json.dumps({
-            'ver_fichas': True, 
-            'agregar_fichas': False, 
-            'editar_fichas': False,
-            'eliminar_fichas': False, 
-            'cambiar_password': True
-        })
-
-        # Verificar si el usuario admin existe
-        cursor.execute("SELECT COUNT(*) FROM usuarios WHERE usuario = 'admin'")
-        if cursor.fetchone()[0] == 0:
-            cursor.execute(
-                "INSERT INTO usuarios (usuario, password, rol, permisos) VALUES (%s, %s, %s, %s)",
-                ('admin', admin_pass, 'admin', default_perms)
-            )
-            print("✅ Usuario 'admin' creado.")
-
-        # Verificar si el usuario asesor existe
-        cursor.execute("SELECT COUNT(*) FROM usuarios WHERE usuario = 'asesor'")
-        if cursor.fetchone()[0] == 0:
-            cursor.execute(
-                "INSERT INTO usuarios (usuario, password, rol, permisos) VALUES (%s, %s, %s, %s)",
-                ('asesor', asesor_pass, 'asesor', default_perms)
-            )
-            print("✅ Usuario 'asesor' creado.")
+        # Insertar usuarios si no existen
+        usuarios_data = [
+            ('admin', generate_password_hash('admin123'), 'admin'),
+            ('asesor', generate_password_hash('asesor123'), 'asesor')
+        ]
+        
+        for usuario, password, rol in usuarios_data:
+            cursor.execute("SELECT COUNT(*) FROM usuarios WHERE usuario = %s", (usuario,))
+            if cursor.fetchone()[0] == 0:
+                permisos = json.dumps({
+                    'ver_fichas': True, 
+                    'agregar_fichas': rol == 'admin',
+                    'editar_fichas': rol == 'admin', 
+                    'eliminar_fichas': rol == 'admin',
+                    'cambiar_password': True
+                })
+                cursor.execute(
+                    "INSERT INTO usuarios (usuario, password, rol, permisos) VALUES (%s, %s, %s, %s)",
+                    (usuario, password, rol, permisos)
+                )
+                print(f"✅ Usuario '{usuario}' creado")
 
         conexion.commit()
-        print("🎉 Base de datos PostgreSQL inicializada correctamente.")
+        print("🎉 Base de datos inicializada CORRECTAMENTE")
         return True
 
     except Exception as err:
-        print(f"❌ Error al crear tablas: {err}")
+        print(f"💥 Error en creación de tablas: {err}")
         conexion.rollback()
         return False
     finally:
         cursor.close()
         conexion.close()
-
-if __name__ == "__main__":
-    print("🔧 Inicializando base de datos PostgreSQL...")
-    crear_tablas()
