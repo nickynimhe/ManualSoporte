@@ -1,7 +1,7 @@
 import os
 
 class Config:
-    SECRET_KEY = 'manual-soporte-secret-key-2024-mastv-12345'
+    SECRET_KEY = 'manual-soporte-secret-key-2024-mastv'
     
     # Configuración para PostgreSQL (Render)
     DB_HOST = os.environ.get('DB_HOST') or 'dpg-d3g1q2nqaa0ldt0j7vug-a.oregon-postgres.render.com'
