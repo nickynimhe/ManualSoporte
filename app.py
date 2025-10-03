@@ -1178,7 +1178,8 @@ def obtener_problemas(categoria):
 
 if __name__ == '__main__':
     with app.app_context():
-        print("🚀 Iniciando aplicación...")
+        print("🚀 Iniciando aplicación Flask...")
+        # Solo crear tablas cuando se ejecute la app, no en import
         from database import crear_tablas
         crear_tablas()
     app.run(host='0.0.0.0', port=5000, debug=True)
