@@ -9,7 +9,7 @@ def crear_conexion():
         try:
             print(f"🔗 Intento {intento + 1} de conexión a PostgreSQL...")
             
-            # CONEXIÓN DIRECTA - SIN variables de entorno
+            # CONEXIÓN DIRECTA - SIN variables de entorno 
             conexion = psycopg2.connect(
                 host='dpg-d3g1q2nqaa0ldt0j7vug-a.oregon-postgres.render.com',
                 database='soporte_tecnico_9sad',
