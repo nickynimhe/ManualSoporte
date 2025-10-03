@@ -1,14 +1,17 @@
 import os
 
 class Config:
-    # Clave secreta para sesiones Flask
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'clave-super-secreta-para-desarrollo'
+    SECRET_KEY = os.environ.get('SECRET_KEY') or 'tu-clave-secreta-aqui'
     
-    # Configuración de MySQL
-    MYSQL_HOST = os.environ.get('dpg-d3g1q2nfte5s73cjpiu0-a') or 'dpg-d3g1q2nfte5s73cjpiu0-a'
-    MYSQL_USER = os.environ.get('soporte_tecnico_9sad_user') or 'soporte_tecnico_9sad_user'
-    MYSQL_PASSWORD = os.environ.get('T56GYS3Oj5w4kGzrdlvAhlGfExjT0t7a') or 'T56GYS3Oj5w4kGzrdlvAhlGfExjT0t7a'
-    MYSQL_DB = os.environ.get('soporte_tecnico_9sad') or 'soporte_tecnico_9sad'
+    # Configuración para PostgreSQL (Render)
+    DB_HOST = os.environ.get('DB_HOST') or 'dpg-d3g1q2nqaa0ldt0j7vug-a.oregon-postgres.render.com'
+    DB_NAME = os.environ.get('DB_NAME') or 'soporte_tecnico_9sad'
+    DB_USER = os.environ.get('DB_USER') or 'soporte_tecnico_9sad_user'
+    DB_PASSWORD = os.environ.get('DB_PASSWORD') or 'T56GYS30j5w4k6zrdlvAh1GfExjT0t7a'
+    DB_PORT = os.environ.get('DB_PORT') or '5432'
+    
+    # URL completa de conexión para PostgreSQL
+    DATABASE_URL = os.environ.get('DATABASE_URL') or f'postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
     
     # Configuración adicional
     DEBUG = os.environ.get('FLASK_DEBUG', 'False').lower() in ('true', '1', 't')
