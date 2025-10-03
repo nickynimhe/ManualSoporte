@@ -1,8 +1,9 @@
 #!/bin/bash
 
 # Ejecuta el script de inicialización de la base de datos
-echo "Inicializando la base de datos..."
-python database.py
+#!/bin/bash
+echo "🚀 Iniciando la aplicación Flask..."
+python app.py
 
 # Inicia la aplicación con Gunicorn
 echo "Iniciando Gunicorn..."
