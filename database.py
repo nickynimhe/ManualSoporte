@@ -1,5 +1,4 @@
 import psycopg2
-from psycopg2 import sql
 from werkzeug.security import generate_password_hash
 import os
 import json
@@ -7,10 +6,11 @@ import urllib.parse
 
 def crear_conexion():
     try:
-        # Opción 1: Usar DATABASE_URL de Render (recomendado)
+        # Opción 1: Usar DATABASE_URL de Render (RECOMENDADO)
         database_url = os.environ.get('DATABASE_URL')
         
         if database_url:
+            print("🔗 Intentando conexión via DATABASE_URL...")
             # Parsear la URL de la base de datos
             url = urllib.parse.urlparse(database_url)
             
@@ -25,12 +25,13 @@ def crear_conexion():
             print("✅ Conexión a PostgreSQL exitosa via DATABASE_URL")
             return conexion
         
-        # Opción 2: Usar variables individuales (alternativa)
-        user = os.environ.get('DB_USER', 'soporte_tecnico_9sad_user')
-        password = os.environ.get('DB_PASSWORD', 'T56GYS30j5w4k6zrdlvAh1GfExjT0t7a')
-        host = os.environ.get('DB_HOST', 'dpg-d3g1q2nqaa0ldt0j7vug-a.oregon-postgres.render.com')
-        database = os.environ.get('DB_NAME', 'soporte_tecnico_9sad')
-        port = os.environ.get('DB_PORT', '5432')
+        # Opción 2: Usar variables individuales
+        print("🔗 Intentando conexión via parámetros individuales...")
+        user = 'soporte_tecnico_9sad_user'
+        password = 'T56GYS30j5w4k6zrdlvAh1GfExjT0t7a'
+        host = 'dpg-d3g1q2nqaa0ldt0j7vug-a.oregon-postgres.render.com'
+        database = 'soporte_tecnico_9sad'
+        port = '5432'
 
         conexion = psycopg2.connect(
             host=host,
@@ -50,8 +51,8 @@ def crear_conexion():
 def crear_tablas():
     conexion = crear_conexion()
     if not conexion:
-        print("No se pudo conectar a la base de datos para crear las tablas.")
-        return
+        print("❌ No se pudo conectar a la base de datos para crear las tablas.")
+        return False
 
     cursor = conexion.cursor()
 
@@ -115,28 +116,14 @@ def crear_tablas():
             )
             print("✅ Usuario 'asesor' creado.")
 
-        # Insertar algunas fichas de ejemplo si no existen
-        cursor.execute("SELECT COUNT(*) FROM fichas")
-        if cursor.fetchone()[0] == 0:
-            fichas_ejemplo = [
-                ('TV', 'No hay señal en el televisor', 'Usuario indica que el televisor no muestra ningún canal, aparece en pantalla negra o con el mensaje sin señal.', 'Micronodo/CATV alarmado, apagado|Problemas con el decodificador', 'Encender el CATV.|Validar que el Micronodo no esté alarmado.|Confirmar que CATV y Micronodo estén conectados correctamente.|Verificar que el decodificador esté programado adecuadamente.', 'Sin señal, CATV, Micronodo, Decodificador'),
-                ('Internet', 'Internet lento o intermitente', 'Usuario indica que la conexión se cae constantemente o que la velocidad es muy baja.', 'Congestión de la red|Potencias mayores a -27', 'Validar potencias del módem.|Realizar Reboot en Vortex y esperar 1 minuto.|Ejecutar Resync Config en Vortex y esperar 1 minuto.|Indicar al usuario desconectar el módem por 3 minutos.', 'Lento, Intermitente'),
-                ('Equipo', 'Equipo no enciende', 'Usuario indica que el dispositivo no prende ni muestra luces aunque esté conectado a la corriente.', 'Cargador del modem desconectado|Boton OFF/ON Sin presionar', 'Indicar al usuario validar el cableado del cargador del módem.|Sugerir conectarlo en otra toma de corriente.|Realizar Resync Config en Vortex y esperar que el equipo cambie de estado.|Recomendar revisar el botón trasero del módem.|Si persiste la falla, generar orden en Softv para enviar personal técnico.', 'Apagado, No enciende, Modem')
-            ]
-            
-            for ficha in fichas_ejemplo:
-                cursor.execute(
-                    "INSERT INTO fichas (categoria, problema, descripcion, causas, solucion, palabras_clave) VALUES (%s, %s, %s, %s, %s, %s)",
-                    ficha
-                )
-            print("✅ Fichas de ejemplo creadas.")
-
         conexion.commit()
         print("🎉 Base de datos PostgreSQL inicializada correctamente.")
+        return True
 
     except Exception as err:
         print(f"❌ Error al crear tablas: {err}")
         conexion.rollback()
+        return False
     finally:
         cursor.close()
         conexion.close()
