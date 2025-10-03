@@ -92,6 +92,23 @@ def inicializar_datos():
 def inject_now():
     return {'now': datetime.now()}
 
+@app.route('/debug')
+def debug():
+    try:
+        from database import crear_conexion
+        conexion = crear_conexion()
+        if conexion:
+            cursor = conexion.cursor()
+            cursor.execute("SELECT version()")
+            version = cursor.fetchone()
+            cursor.close()
+            conexion.close()
+            return f"✅ PostgreSQL conectado. Versión: {version[0]}"
+        else:
+            return "❌ No se pudo conectar a PostgreSQL"
+    except Exception as e:
+        return f"❌ Error: {str(e)}"
+
 # Inyectar función de permisos a todos los templates
 @app.context_processor
 def inject_permissions():
