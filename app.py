@@ -88,26 +88,57 @@ def inicializar_datos():
     else:
         print("No se pudo conectar a la base de datos para inicializar")
 
-@app.context_processor
-def inject_now():
-    return {'now': datetime.now()}
+# Agrega estas rutas ANTES de las demás rutas:
 
-@app.route('/debug')
-def debug():
+@app.route('/debug-db')
+def debug_db():
     try:
         from database import crear_conexion
         conexion = crear_conexion()
         if conexion:
             cursor = conexion.cursor()
             cursor.execute("SELECT version()")
-            version = cursor.fetchone()
+            version = cursor.fetchone()[0]
+            
+            cursor.execute("SELECT COUNT(*) FROM usuarios")
+            usuarios = cursor.fetchone()[0]
+            
+            cursor.execute("SELECT COUNT(*) FROM fichas")
+            fichas = cursor.fetchone()[0]
+            
             cursor.close()
             conexion.close()
-            return f"✅ PostgreSQL conectado. Versión: {version[0]}"
+            
+            return f"""
+            <h1>✅ PostgreSQL CONECTADO</h1>
+            <p><strong>Versión:</strong> {version}</p>
+            <p><strong>Usuarios en DB:</strong> {usuarios}</p>
+            <p><strong>Fichas en DB:</strong> {fichas}</p>
+            <p><strong>Credenciales de prueba:</strong></p>
+            <ul>
+                <li>Usuario: <code>admin</code> / Contraseña: <code>admin123</code></li>
+                <li>Usuario: <code>asesor</code> / Contraseña: <code>asesor123</code></li>
+            </ul>
+            """
         else:
-            return "❌ No se pudo conectar a PostgreSQL"
+            return "<h1>❌ ERROR: No se pudo conectar a PostgreSQL</h1>"
     except Exception as e:
-        return f"❌ Error: {str(e)}"
+        return f"<h1>❌ EXCEPCIÓN: {str(e)}</h1>"
+
+@app.route('/test-login')
+def test_login():
+    return '''
+    <h1>Prueba de Login</h1>
+    <form action="/login" method="post">
+        <input type="text" name="usuario" value="admin" placeholder="Usuario">
+        <input type="password" name="password" value="admin123" placeholder="Contraseña">
+        <button type="submit">Login</button>
+    </form>
+    '''
+
+@app.context_processor
+def inject_now():
+    return {'now': datetime.now()}
 
 
 @app.route('/test-db')
@@ -1145,11 +1176,9 @@ def obtener_problemas(categoria):
     problemas = problemas_por_categoria.get(categoria, [])
     return jsonify(problemas)
 
-
 if __name__ == '__main__':
     with app.app_context():
-        # Crear tablas si no existen
+        print("🚀 Iniciando aplicación...")
+        from database import crear_tablas
         crear_tablas()
-        # Inicializar datos si la base de datos está vacía
-        inicializar_datos()
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=5000, debug=True)
