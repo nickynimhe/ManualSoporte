@@ -1,29 +1,24 @@
 import psycopg2
 from werkzeug.security import generate_password_hash
-import os
 import json
-import urllib.parse
 
 def crear_conexion():
     try:
-        # Opción 1: Usar DATABASE_URL de Render (RECOMENDADO)
-        database_url = os.environ.get('DATABASE_URL')
+        # Conexión DIRECTA con los valores de tu PostgreSQL
+        conexion = psycopg2.connect(
+            host='dpg-d3g1q2nqaa0ldt0j7vug-a.oregon-postgres.render.com',
+            database='soporte_tecnico_9sad',
+            user='soporte_tecnico_9sad_user',
+            password='T56GYS30j5w4k6zrdlvAh1GfExjT0t7a',
+            port='5432',
+            sslmode='require'
+        )
+        print("✅ Conexión a PostgreSQL exitosa")
+        return conexion
         
-        if database_url:
-            print("🔗 Intentando conexión via DATABASE_URL...")
-            # Parsear la URL de la base de datos
-            url = urllib.parse.urlparse(database_url)
-            
-            conexion = psycopg2.connect(
-                database=url.path[1:],  # Remover el '/' inicial
-                user=url.username,
-                password=url.password,
-                host=url.hostname,
-                port=url.port,
-                sslmode='require'  # Requerido para Render PostgreSQL
-            )
-            print("✅ Conexión a PostgreSQL exitosa via DATABASE_URL")
-            return conexion
+    except Exception as err:
+        print(f"❌ Error al conectar a PostgreSQL: {err}")
+        return None
         
         # Opción 2: Usar variables individuales
         print("🔗 Intentando conexión via parámetros individuales...")
