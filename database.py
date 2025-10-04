@@ -1,24 +1,47 @@
+import os
 import psycopg2
 from werkzeug.security import generate_password_hash
 import json
 import time
 
 def crear_conexion():
+    """Usa EXACTAMENTE la misma lógica que get_db() de Flask"""
     max_intentos = 3
     for intento in range(max_intentos):
         try:
             print(f"🔗 Intento {intento + 1} de conexión a PostgreSQL...")
             
-            # CONEXIÓN DIRECTA - SIN variables de entorno 
-            conexion = psycopg2.connect(
-                host='dpg-d3g1q2nqaa0ldt0j7vug-a.oregon-postgres.render.com',
-                database='soporte_tecnico_9sad',
-                user='soporte_tecnico_9sad_user',
-                password='T56GYS30j5w4k6zrdlvAh1GfExjT0t7a',
-                port=5432,
-                sslmode='require',
-                connect_timeout=10
-            )
+            # CÓDIGO CORREGIDO - usar nombres de variables de entorno, no valores
+            database_url = os.getenv('DATABASE_URL')
+            sslmode_require = os.getenv('SSL_MODE', '') == 'require'
+
+            if not database_url:
+                # Configuración local - usar nombres CORRECTOS de variables de entorno
+                user = os.getenv('DB_USER', 'soporte_tecnico_9sad_user')
+                password = os.getenv('DB_PASSWORD', 'T56GYS30j5w4k6zrdlvAh1GfExjT0t7a')
+                host = os.getenv('DB_HOST', 'dpg-d3g1q2nqaa0ldt0j7vug-a.oregon-postgres.render.com')
+                port = os.getenv('DB_PORT', '5432')
+                dbname = os.getenv('DB_NAME', 'soporte_tecnico_9sad')
+                
+                print(f"🔧 Configuración local - Host: {host}, DB: {dbname}, User: {user}")
+                
+                # Codifica la contraseña por si tiene caracteres especiales
+                password_encoded = quote_plus(password)
+                database_url = f"postgresql://{user}:{password_encoded}@{host}:{port}/{dbname}"
+            else:
+                print("🔧 Usando DATABASE_URL de variable de entorno")
+                if database_url.startswith("postgres://"):
+                    database_url = database_url.replace("postgres://", "postgresql://", 1)
+            
+            # Agrega sslmode=require al URI si es necesario
+            if sslmode_require and 'sslmode=' not in database_url:
+                separator = '?' if '?' not in database_url else '&'
+                database_url += f"{separator}sslmode=require"
+
+            print(f"🔗 URL de conexión: {database_url.split('@')[0]}@***")  # Oculta credenciales en logs
+
+            # Conexión SOLO con el URI (igual que en Flask)
+            conexion = psycopg2.connect(database_url)
             
             print("✅ ¡CONEXIÓN EXITOSA a PostgreSQL!")
             return conexion
@@ -32,6 +55,7 @@ def crear_conexion():
                 print("💥 Todos los intentos de conexión fallaron")
                 return None
 
+# El resto del código se mantiene igual...
 def crear_tablas():
     print("🔧 Iniciando creación de tablas...")
     conexion = crear_conexion()
