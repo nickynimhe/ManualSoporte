@@ -259,7 +259,7 @@ def login():
                         if user_data.get('permisos'):
                             try:
                                 permisos = json.loads(user_data['permisos'])
-                            except:
+                            except: 
                                 permisos = {}
                         
                         user = User(user_data['id'], user_data['usuario'], user_data['rol'], permisos)
