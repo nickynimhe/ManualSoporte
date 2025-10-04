@@ -238,7 +238,7 @@ def permiso_requerido(permiso):
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'GET':
-        return render_template('index.html')
+        return render_template('login.html')
     
     # Si es POST, procesar el login
     cursor = None
@@ -295,7 +295,7 @@ def login():
                 'permisos': permisos
             }), 200
         else:
-            return redirect(url_for('index'))  # Redirigir a la página principal
+            return redirect(url_for('index.html'))  # Redirigir a la página principal
 
     except Exception as err:
         print(f"💥 Error en login: {err}")
