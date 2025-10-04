@@ -140,6 +140,12 @@ def test_login():
 def inject_now():
     return {'now': datetime.now()}
 
+@app.route('/')
+def index():
+    if 'user_id' in session:
+        return render_template('login.html')  # Tu página principal
+    else:
+        return redirect(url_for('index'))  # Redirigir al login
 
 @app.route('/test-db')
 def test_db():
