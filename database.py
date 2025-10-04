@@ -1,5 +1,6 @@
 import os
 import psycopg2
+from urllib.parse import quote_plus
 from werkzeug.security import generate_password_hash
 import json
 import time
@@ -55,16 +56,21 @@ def crear_conexion():
                 print("💥 Todos los intentos de conexión fallaron")
                 return None
 
-# El resto del código se mantiene igual...
 def crear_tablas():
+    """Función para crear tablas con manejo seguro de errores"""
     print("🔧 Iniciando creación de tablas...")
-    conexion = crear_conexion()
-    if not conexion:
-        print("💥 No se pudo conectar para crear tablas")
-        return False
-
-    cursor = conexion.cursor()
+    
+    conexion = None
+    cursor = None
+    
     try:
+        conexion = crear_conexion()
+        if not conexion:
+            print("💥 No se pudo conectar para crear tablas")
+            return False
+
+        cursor = conexion.cursor()
+
         # Tabla usuarios
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS usuarios (
@@ -123,11 +129,79 @@ def crear_tablas():
 
     except Exception as err:
         print(f"💥 Error en creación de tablas: {err}")
-        conexion.rollback()
+        if conexion:
+            conexion.rollback()
         return False
+        
     finally:
-        cursor.close()
-        conexion.close()
+        # ✅ MANEJO SEGURO - verificar antes de cerrar
+        if cursor is not None:
+            cursor.close()
+            print("🔒 Cursor cerrado")
+        if conexion is not None:
+            conexion.close()
+            print("🔒 Conexión cerrada")
+
+def verificar_tablas():
+    """Función para verificar que las tablas existen"""
+    conexion = None
+    cursor = None
+    
+    try:
+        conexion = crear_conexion()
+        if not conexion:
+            print("💥 No se pudo conectar para verificar tablas")
+            return False
+
+        cursor = conexion.cursor()
+        
+        # Verificar tabla usuarios
+        cursor.execute("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name = 'usuarios'
+            )
+        """)
+        usuarios_existe = cursor.fetchone()[0]
+        
+        # Verificar tabla fichas
+        cursor.execute("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name = 'fichas'
+            )
+        """)
+        fichas_existe = cursor.fetchone()[0]
+        
+        print(f"📊 Tabla 'usuarios' existe: {usuarios_existe}")
+        print(f"📊 Tabla 'fichas' existe: {fichas_existe}")
+        
+        return usuarios_existe and fichas_existe
+        
+    except Exception as err:
+        print(f"💥 Error verificando tablas: {err}")
+        return False
+        
+    finally:
+        if cursor is not None:
+            cursor.close()
+        if conexion is not None:
+            conexion.close()
+
+if __name__ == "__main__":
+    print("🚀 Ejecutando inicialización de base de datos...")
+    
+    # Primero verificar si las tablas ya existen
+    if verificar_tablas():
+        print("✅ Las tablas ya existen. No es necesario crearlas.")
+    else:
+        print("🔧 Creando tablas...")
+        if crear_tablas():
+            print("🎉 Inicialización completada exitosamente!")
+        else:
+            print("💥 Falló la inicialización de la base de datos")
 
 if __name__ == "__main__":
     print("🔧 Ejecutando inicialización de base de datos...")
