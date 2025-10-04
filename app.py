@@ -235,57 +235,79 @@ def permiso_requerido(permiso):
     return decorator
 
 # Rutas de autenticación
-@app.route('/login', methods=['POST'])
+@app.route('/login', methods=['GET', 'POST'])
 def login():
-    cursor = None  # ✅ INICIALIZAR LA VARIABLE AL PRINCIPIO
+    if request.method == 'GET':
+        return render_template('login.html')
+    
+    # Si es POST, procesar el login
+    cursor = None
     try:
-        data = request.get_json()
+        # Verificar si es JSON o form data
+        if request.is_json:
+            data = request.get_json()
+        else:
+            data = request.form
+        
         usuario = data.get('usuario')
         password = data.get('password')
 
         if not usuario or not password:
-            return jsonify({'error': 'Usuario y contraseña requeridos'}), 400
+            if request.is_json:
+                return jsonify({'error': 'Usuario y contraseña requeridos'}), 400
+            else:
+                return render_template('login.html', error='Usuario y contraseña requeridos')
 
         # Obtener conexión
         conexion = get_db()
-        cursor = conexion.cursor()  # ✅ ASIGNAR LA VARIABLE AQUÍ
+        cursor = conexion.cursor()
 
         # Buscar usuario
         cursor.execute("SELECT id, usuario, password, rol, permisos FROM usuarios WHERE usuario = %s", (usuario,))
         user_data = cursor.fetchone()
 
         if not user_data:
-            return jsonify({'error': 'Usuario no encontrado'}), 401
+            if request.is_json:
+                return jsonify({'error': 'Usuario no encontrado'}), 401
+            else:
+                return render_template('login.html', error='Usuario no encontrado')
 
         user_id, username, hashed_password, rol, permisos = user_data
 
         # Verificar contraseña
         if not check_password_hash(hashed_password, password):
-            return jsonify({'error': 'Contraseña incorrecta'}), 401
+            if request.is_json:
+                return jsonify({'error': 'Contraseña incorrecta'}), 401
+            else:
+                return render_template('login.html', error='Contraseña incorrecta')
 
-        # Crear sesión
+        # Login exitoso
         session['user_id'] = user_id
         session['usuario'] = username
         session['rol'] = rol
         session['permisos'] = permisos
 
-        return jsonify({
-            'mensaje': 'Login exitoso',
-            'usuario': username,
-            'rol': rol,
-            'permisos': permisos
-        }), 200
+        if request.is_json:
+            return jsonify({
+                'mensaje': 'Login exitoso',
+                'usuario': username,
+                'rol': rol,
+                'permisos': permisos
+            }), 200
+        else:
+            return redirect(url_for('index'))  # Redirigir a la página principal
 
     except Exception as err:
         print(f"💥 Error en login: {err}")
-        return jsonify({'error': 'Error interno del servidor'}), 500
+        if request.is_json:
+            return jsonify({'error': 'Error interno del servidor'}), 500
+        else:
+            return render_template('login.html', error='Error interno del servidor')
         
     finally:
-        # ✅ VERIFICAR QUE cursor EXISTA ANTES DE CERRARLO
+        # ✅ SOLO cerrar recursos, sin return
         if cursor is not None:
             cursor.close()
-            
-            return render_template('login.html')
 
 
 @app.route('/soluciones_visuales')
