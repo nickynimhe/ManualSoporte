@@ -284,8 +284,8 @@ def login():
         # ✅ VERIFICAR QUE cursor EXISTA ANTES DE CERRARLO
         if cursor is not None:
             cursor.close()
-    
-    return render_template('login.html')
+            
+return render_template('login.html')
 
 
 @app.route('/soluciones_visuales')
