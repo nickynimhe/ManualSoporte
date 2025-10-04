@@ -235,50 +235,55 @@ def permiso_requerido(permiso):
     return decorator
 
 # Rutas de autenticación
-@app.route('/login', methods=['GET', 'POST'])
+@app.route('/login', methods=['POST'])
 def login():
-    # Si el usuario ya está autenticado, redirigir al index
-    if current_user.is_authenticated:
-        return redirect(url_for('index'))
-    
-    if request.method == 'POST':
-        usuario = request.form['usuario']
-        password = request.form['password']
+    cursor = None  # ✅ INICIALIZAR LA VARIABLE AL PRINCIPIO
+    try:
+        data = request.get_json()
+        usuario = data.get('usuario')
+        password = data.get('password')
+
+        if not usuario or not password:
+            return jsonify({'error': 'Usuario y contraseña requeridos'}), 400
+
+        # Obtener conexión
+        conexion = get_db()
+        cursor = conexion.cursor()  # ✅ ASIGNAR LA VARIABLE AQUÍ
+
+        # Buscar usuario
+        cursor.execute("SELECT id, usuario, password, rol, permisos FROM usuarios WHERE usuario = %s", (usuario,))
+        user_data = cursor.fetchone()
+
+        if not user_data:
+            return jsonify({'error': 'Usuario no encontrado'}), 401
+
+        user_id, username, hashed_password, rol, permisos = user_data
+
+        # Verificar contraseña
+        if not check_password_hash(hashed_password, password):
+            return jsonify({'error': 'Contraseña incorrecta'}), 401
+
+        # Crear sesión
+        session['user_id'] = user_id
+        session['usuario'] = username
+        session['rol'] = rol
+        session['permisos'] = permisos
+
+        return jsonify({
+            'mensaje': 'Login exitoso',
+            'usuario': username,
+            'rol': rol,
+            'permisos': permisos
+        }), 200
+
+    except Exception as err:
+        print(f"💥 Error en login: {err}")
+        return jsonify({'error': 'Error interno del servidor'}), 500
         
-        conexion = crear_conexion()
-        if conexion:
-            try:
-                cursor = conexion.cursor(dictionary=True)
-                cursor.execute("SELECT * FROM usuarios WHERE usuario = %s", (usuario,))
-                user_data = cursor.fetchone()
-                
-                if user_data and user_data['password'] and user_data['password'].strip():
-                    if check_password_hash(user_data['password'], password):
-                        # Cargar permisos desde JSON
-                        permisos = {}
-                        if user_data.get('permisos'):
-                            try:
-                                permisos = json.loads(user_data['permisos'])
-                            except:
-                                permisos = {}
-                        
-                        user = User(user_data['id'], user_data['usuario'], user_data['rol'], permisos)
-                        login_user(user)
-                        flash('¡Inicio de sesión exitoso!', 'success')
-                        return redirect(url_for('index'))
-                    else:
-                        flash('Usuario o contraseña incorrectos', 'error')
-                else:
-                    flash('Usuario no encontrado', 'error')
-                    
-            except Exception as e:
-                flash('Error de base de datos', 'error')
-                print(f"Error: {e}")
-            finally:
-                cursor.close()
-                conexion.close()
-        else:
-            flash('Error de conexión a la base de datos', 'error')
+    finally:
+        # ✅ VERIFICAR QUE cursor EXISTA ANTES DE CERRARLO
+        if cursor is not None:
+            cursor.close()
     
     return render_template('login.html')
 
