@@ -978,7 +978,7 @@ def index():
             cursor.close()
             conexion.close()
     
-    return render_template('index.html', fichas=fichas, user=current_user)
+    return render_template('index.html', user=current_user)
 
 @app.route('/agregar', methods=['GET', 'POST'])
 @login_required
