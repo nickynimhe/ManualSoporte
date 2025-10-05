@@ -16,156 +16,9 @@ login_manager.init_app(app)
 login_manager.login_view = 'login'
 login_manager.login_message = 'Por favor inicia sesión para acceder a esta página.'
 
-# Función para inicializar datos en la base de datos
-def inicializar_datos():
-    cursor = None  # ✅ INICIALIZAR
-    conexion = None  # ✅ INICIALIZAR
-    try:
-        conexion = crear_conexion()
-        if conexion:
-            cursor = conexion.cursor()
-            
-            # Verificar si ya existen datos
-            cursor.execute("SELECT COUNT(*) as count FROM usuarios")
-            usuarios_count = cursor.fetchone()[0]  # PostgreSQL devuelve tupla
-            
-            cursor.execute("SELECT COUNT(*) as count FROM fichas")
-            fichas_count = cursor.fetchone()[0]  # PostgreSQL devuelve tupla
-            
-            # Si no hay datos, insertar los datos iniciales
-            if usuarios_count == 0:
-                print("Inicializando datos de usuarios...")
-                
-                # Insertar usuarios
-                usuarios_data = [
-                    ('admin', 'scrypt:32768:8:1$GYLitI11BqRpnnNx$3adb3a1bf184477ed191740551bacc0554b711f78d020526a6a63fbb97562da618e5ce5ef2b2af88eae7015aa202672e22f452568aee17b2f289d34aaad96646', 'admin'),
-                    ('asesor', 'scrypt:32768:8:1$y4mBv6yET3dE1AOG$a0f2ae79026b6d3accb5bd80c610f8c6c0bc1fbc70d11b8b5825188947a64abe24114f439b89f935f704416d7bc6868e37920714c8177a7eb2276c3f61095b6e', 'asesor')
-                ]
-                
-                permisos_base = json.dumps({
-                    "ver_fichas": True,
-                    "agregar_fichas": False,
-                    "editar_fichas": False,
-                    "eliminar_fichas": False,
-                    "cambiar_password": True
-                })
-                
-                for usuario, password, rol in usuarios_data:
-                    cursor.execute(
-                        "INSERT INTO usuarios (usuario, password, rol, permisos) VALUES (%s, %s, %s, %s)",
-                        (usuario, password, rol, permisos_base)
-                    )
-                
-                print("Usuarios iniciales creados")
-            
-            if fichas_count == 0:
-                print("Inicializando datos de fichas...")
-                
-                # Insertar fichas de ejemplo
-                fichas_data = [
-                    ('TV', 'No hay señal en el televisor', 'Usuario indica que el televisor no muestra ningún canal, aparece en pantalla negra o con el mensaje sin señal.', 'Micronodo/CATV alarmado, apagado|Problemas con el decodificador', 'Encender el CATV.|Validar que el Micronodo no esté alarmado.|Confirmar que CATV y Micronodo estén conectados correctamente.|Verificar que el decodificador esté programado adecuadamente.', 'Sin señal, CATV, Micronodo, Decodificador'),
-                    ('TV', 'Imagen pixelada o con interferencias', 'Usuario indica que la imagen se ve con cuadritos, borrosa, congelada o con rayas', 'Cable de señal dañado|Problemas con la antena/servicio|Reprogramacion mal ejecutada', 'Validar si el inconveniente no corresponde al proveedor.|Indicar al usuario que reprograme en modo Aire/Antena.|Brindar el paso a paso para la reprogramación.|Si persiste la falla, generar orden de servicio en Softv para enviar personal técnico.', 'Pixeleado, lluvioso, intermitencia'),
-                    ('Internet', 'Internet lento o intermitente', 'Usuario indica que la conexión se cae constantemente o que la velocidad es muy baja.', 'Congestión de la red|Potencias mayores a -27', 'Validar potencias del módem.|Realizar Reboot en Vortex y esperar 1 minuto.|Ejecutar Resync Config en Vortex y esperar 1 minuto.|Indicar al usuario desconectar el módem por 3 minutos.', 'Lento, Intermitente'),
-                    ('Internet', 'Sin conexión a internet', 'Usuario indica que no puede navegar en ningún dispositivo y aparece como sin acceso a la red, tiene un LED rojo encendido.', 'Router/módem apagado|patchcord desconectado/Dañado', 'Habilitar nuevamente el módem en Vortex.|Si presenta LOS, generar orden de falla en Softv para enviar personal técnico.', 'LOS , Modem'),
-                    ('Equipo', 'Equipo no enciende', 'Usuario indica que el dispositivo no prende ni muestra luces aunque esté conectado a la corriente.', 'Cargador del modem desconectado|Boton OFF/ON Sin presionar', 'Indicar al usuario validar el cableado del cargador del módem.|Sugerir conectarlo en otra toma de corriente.|Realizar Resync Config en Vortex y esperar que el equipo cambie de estado.|Recomendar revisar el botón trasero del módem.|Si persiste la falla, generar orden en Softv para enviar personal técnico.', 'Apagado, No enciende, Modem')
-                ]
-                
-                for categoria, problema, descripcion, causas, solucion, palabras_clave in fichas_data:
-                    cursor.execute(
-                        "INSERT INTO fichas (categoria, problema, descripcion, causas, solucion, palabras_clave) VALUES (%s, %s, %s, %s, %s, %s)",
-                        (categoria, problema, descripcion, causas, solucion, palabras_clave)
-                    )
-                
-                print("Fichas iniciales creadas")
-            
-            conexion.commit()
-            print("Base de datos inicializada correctamente")
-            
-    except Exception as e:
-        print(f"Error al inicializar datos: {e}")
-        if conexion:
-            conexion.rollback()
-    finally:
-        # ✅ VERIFICAR ANTES DE CERRAR
-        if cursor is not None:
-            cursor.close()
-        if conexion is not None:
-            conexion.close()
-    else:
-        print("No se pudo conectar a la base de datos para inicializar")
-
-# Agrega estas rutas ANTES de las demás rutas:
-
-@app.route('/debug-db')
-def debug_db():
-    try:
-        from database import crear_conexion
-        conexion = crear_conexion()
-        if conexion:
-            cursor = conexion.cursor()
-            cursor.execute("SELECT version()")
-            version = cursor.fetchone()[0]
-            
-            cursor.execute("SELECT COUNT(*) FROM usuarios")
-            usuarios = cursor.fetchone()[0]
-            
-            cursor.execute("SELECT COUNT(*) FROM fichas")
-            fichas = cursor.fetchone()[0]
-            
-            cursor.close()
-            conexion.close()
-            
-            return f"""
-            <h1>✅ PostgreSQL CONECTADO</h1>
-            <p><strong>Versión:</strong> {version}</p>
-            <p><strong>Usuarios en DB:</strong> {usuarios}</p>
-            <p><strong>Fichas en DB:</strong> {fichas}</p>
-            <p><strong>Credenciales de prueba:</strong></p>
-            <ul>
-                <li>Usuario: <code>admin</code> / Contraseña: <code>admin123</code></li>
-                <li>Usuario: <code>asesor</code> / Contraseña: <code>asesor123</code></li>
-            </ul>
-            """
-        else:
-            return "<h1>❌ ERROR: No se pudo conectar a PostgreSQL</h1>"
-    except Exception as e:
-        return f"<h1>❌ EXCEPCIÓN: {str(e)}</h1>"
-
-@app.route('/test-login')
-def test_login():
-    return '''
-    <h1>Prueba de Login</h1>
-    <form action="/login" method="post">
-        <input type="text" name="usuario" value="admin" placeholder="Usuario">
-        <input type="password" name="password" value="admin123" placeholder="Contraseña">
-        <button type="submit">Login</button>
-    </form>
-    '''
-
 @app.context_processor
 def inject_now():
     return {'now': datetime.now()}
-
-
-@app.route('/test-db')
-def test_db():
-    try:
-        from database import crear_conexion
-        conexion = crear_conexion()
-        if conexion:
-            cursor = conexion.cursor()
-            cursor.execute("SELECT version()")
-            version = cursor.fetchone()
-            cursor.execute("SELECT COUNT(*) FROM usuarios")
-            usuarios = cursor.fetchone()[0]
-            cursor.close()
-            conexion.close()
-            return f"✅ PostgreSQL OK. Versión: {version[0]}. Usuarios: {usuarios}"
-        else:
-            return "❌ No se pudo conectar a PostgreSQL"
-    except Exception as e:
-        return f"❌ Error: {str(e)}"
-        
 
 # Inyectar función de permisos a todos los templates
 @app.context_processor
@@ -199,33 +52,43 @@ class User(UserMixin):
 
 @login_manager.user_loader
 def load_user(user_id):
-    cursor = None  # ✅ INICIALIZAR
-    conexion = None  # ✅ INICIALIZAR
+    cursor = None
+    conexion = None
     try:
         conexion = crear_conexion()
         if conexion:
-            cursor = conexion.cursor(dictionary=True)
+            cursor = conexion.cursor()
             cursor.execute("SELECT * FROM usuarios WHERE id = %s", (user_id,))
             user_data = cursor.fetchone()
             if user_data:
+                # Convertir tupla a diccionario
+                user_dict = {
+                    'id': user_data[0],
+                    'usuario': user_data[1],
+                    'password': user_data[2],
+                    'rol': user_data[3],
+                    'permisos': user_data[4],
+                    'fecha_creacion': user_data[5],
+                    'fecha_actualizacion': user_data[6]
+                }
+                
                 # Cargar permisos desde JSON
                 permisos = {}
-                if user_data.get('permisos'):
+                if user_dict.get('permisos'):
                     try:
-                        permisos = json.loads(user_data['permisos'])
+                        permisos = json.loads(user_dict['permisos'])
                     except:
                         permisos = {}
                 
                 return User(
-                    user_data['id'], 
-                    user_data['usuario'], 
-                    user_data['rol'],
+                    user_dict['id'], 
+                    user_dict['usuario'], 
+                    user_dict['rol'],
                     permisos
                 )
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error en load_user: {e}")
     finally:
-        # ✅ VERIFICAR ANTES DE CERRAR
         if cursor is not None:
             cursor.close()
         if conexion is not None:
@@ -252,8 +115,8 @@ def login():
     if current_user.is_authenticated:
         return redirect(url_for('index'))
     
-    cursor = None  # ✅ INICIALIZAR LA VARIABLE AL PRINCIPIO
-    conexion = None  # ✅ INICIALIZAR LA CONEXIÓN TAMBIÉN
+    cursor = None
+    conexion = None
     
     if request.method == 'POST':
         usuario = request.form['usuario']
@@ -262,21 +125,30 @@ def login():
         try:
             conexion = crear_conexion()
             if conexion:
-                cursor = conexion.cursor(dictionary=True)  # ✅ ASIGNAR DENTRO DEL TRY
+                cursor = conexion.cursor()
                 cursor.execute("SELECT * FROM usuarios WHERE usuario = %s", (usuario,))
                 user_data = cursor.fetchone()
                 
-                if user_data and user_data['password'] and user_data['password'].strip():
-                    if check_password_hash(user_data['password'], password):
+                if user_data and user_data[2] and user_data[2].strip():  # user_data[2] es password
+                    # Convertir tupla a diccionario
+                    user_dict = {
+                        'id': user_data[0],
+                        'usuario': user_data[1],
+                        'password': user_data[2],
+                        'rol': user_data[3],
+                        'permisos': user_data[4]
+                    }
+                    
+                    if check_password_hash(user_dict['password'], password):
                         # Cargar permisos desde JSON
                         permisos = {}
-                        if user_data.get('permisos'):
+                        if user_dict.get('permisos'):
                             try:
-                                permisos = json.loads(user_data['permisos'])
-                            except: 
+                                permisos = json.loads(user_dict['permisos'])
+                            except:
                                 permisos = {}
                         
-                        user = User(user_data['id'], user_data['usuario'], user_data['rol'], permisos)
+                        user = User(user_dict['id'], user_dict['usuario'], user_dict['rol'], permisos)
                         login_user(user)
                         flash('¡Inicio de sesión exitoso!', 'success')
                         return redirect(url_for('index'))
@@ -284,22 +156,19 @@ def login():
                         flash('Usuario o contraseña incorrectos', 'error')
                 else:
                     flash('Usuario no encontrado', 'error')
-                    
             else:
                 flash('Error de conexión a la base de datos', 'error')
                 
         except Exception as e:
             flash('Error de base de datos', 'error')
-            print(f"Error: {e}")
+            print(f"Error en login: {e}")
         finally:
-            # ✅ VERIFICAR ANTES DE CERRAR
             if cursor is not None:
                 cursor.close()
             if conexion is not None:
                 conexion.close()
     
     return render_template('login.html')
-
 
 @app.route('/soluciones_visuales')
 @login_required
@@ -418,7 +287,6 @@ def soluciones_visuales():
 def atencion_telefonica():
     return render_template('atencion_telefonica.html')
 
-# Agregar esta ruta en app.py
 @app.route('/informacion-general')
 @login_required
 def informacion_general():
@@ -429,7 +297,7 @@ def informacion_general():
             'contenido': [
                 {
                     'subtitulo': 'Planes Básicos',
-                    'contenido_items': [  # CAMBIADO: items -> contenido_items
+                    'contenido_items': [
                         '💯 **PLANES DE TV E INTERNET** 💯',
                         '400 megas + TV: $85.000',
                         '500 megas + TV: $95.000', 
@@ -446,7 +314,7 @@ def informacion_general():
                 },
                 {
                     'subtitulo': 'Planes Corporativos',
-                    'contenido_items': [  # CAMBIADO: items -> contenido_items
+                    'contenido_items': [
                         '💯 **PLANES CORPORATIVOS** 💯',
                         '1Mb: $12.000',
                         '30Mb (mínimo): $360.000 + 19% IVA = $428.400',
@@ -454,9 +322,8 @@ def informacion_general():
                         '**Equipo:** robusto para configuraciones especiales'
                     ]
                 },
-                
-                 {
-                    'subtitulo': 'Planes Guamal y Sanmartin',  # NUEVA SUBSECCIÓN
+                {
+                    'subtitulo': 'Planes Guamal y Sanmartin',
                     'contenido_items': [
                         '🎯 *PLANES DE TV + INTERNET* 🎯',
                         'TV + 200MB: $65.000',
@@ -467,10 +334,9 @@ def informacion_general():
                         'Solo TV: $50.000'
                     ]
                 },
-                 
                 {
                     'subtitulo': 'Planes Acacías',
-                    'contenido_items': [  # CAMBIADO: items -> contenido_items
+                    'contenido_items': [
                         '💯 **PLANES DE TV E INTERNET** 💯',
                         'TV + Internet 200MB: $85.000',
                         'TV + Internet 300MB: $95.000',
@@ -493,7 +359,7 @@ def informacion_general():
             'contenido': [
                 {
                     'subtitulo': 'Información General para Afiliar',
-                    'contenido_items': [  # CAMBIADO: items -> contenido_items
+                    'contenido_items': [
                         '**La afiliación no tiene costo**',
                         '**Instalación sin costo** en zona urbana (rural: $150.000)',
                         '',
@@ -517,7 +383,7 @@ def informacion_general():
                 },
                 {
                     'subtitulo': 'Afiliación San Joaquín',
-                    'contenido_items': [  # CAMBIADO: items -> contenido_items
+                    'contenido_items': [
                         '**Costo de instalación:** $60.000',
                         '**Fibra incluida:** primeros 70 metros',
                         '**Costo metro adicional:** $1.700',
@@ -529,7 +395,7 @@ def informacion_general():
                 },
                 {
                     'subtitulo': 'Información Adicional',
-                    'contenido_items': [  # CAMBIADO: items -> contenido_items
+                    'contenido_items': [
                         '**Para asesores solicitar:**',
                         '• Barrio',
                         '• Dirección exacta', 
@@ -549,7 +415,7 @@ def informacion_general():
             'contenido': [
                 {
                     'subtitulo': '¡Llegó Win Sports + a M@STV Producciones!',
-                    'contenido_items': [  # CAMBIADO: items -> contenido_items
+                    'contenido_items': [
                         '**Precio:** $35.000 adicionales al mes',
                         '**Incluye:**',
                         '• Acceso a Win Sports +',
@@ -570,14 +436,14 @@ def informacion_general():
             'contenido': [
                 {
                     'subtitulo': 'Horarios de Atención',
-                    'contenido_items': [  # CAMBIADO: items -> contenido_items
+                    'contenido_items': [
                         '**Lunes a Viernes:** 8:00 AM - 5:00 PM',
                         '**Sábados:** 8:00 AM - 12:00 PM'
                     ]
                 },
                 {
                     'subtitulo': 'Direcciones de Oficinas',
-                    'contenido_items': [  # CAMBIADO: items -> contenido_items
+                    'contenido_items': [
                         '**Facatativá:** Cl 11 #7A-04, Diurba',
                         '**Bojacá:** Cr 6 #5-146, Barrio Centro',
                         '**Zipacón:** Crr 4 #5-57, Frente al parque',
@@ -606,7 +472,7 @@ def informacion_general():
                 },
                 {
                     'subtitulo': 'Puntos Autorizados Facatativá',
-                    'contenido_items': [  # CAMBIADO: items -> contenido_items
+                    'contenido_items': [
                         '**Bolos el Tunjo:** Cr 2 #6-105',
                         '**CLT Comunicaciones:** Cl 19 #1A-28 Sur, Prado de Cartagenita',
                         '**Portal de María:** Transversal 11 #5-04, Manzana 5 Casa 30 S.M.A.',
@@ -623,7 +489,7 @@ def informacion_general():
             'contenido': [
                 {
                     'subtitulo': 'Cancelación de Servicio',
-                    'contenido_items': [  # CAMBIADO: items -> contenido_items
+                    'contenido_items': [
                         '**Requisitos:**',
                         '• Acercarse a la oficina',
                         '• Carta indicando razón de cancelación',
@@ -633,7 +499,7 @@ def informacion_general():
                 },
                 {
                     'subtitulo': 'Cambio de Titular',
-                    'contenido_items': [  # CAMBIADO: items -> contenido_items
+                    'contenido_items': [
                         '**Requisitos:**',
                         '• Carta solicitando cambio, firmada por antiguo y nuevo titular',
                         '• Copia de cédula del nuevo titular',
@@ -642,7 +508,7 @@ def informacion_general():
                 },
                 {
                     'subtitulo': 'Cambio de Plan',
-                    'contenido_items': [  # CAMBIADO: items -> contenido_items
+                    'contenido_items': [
                         '**Procedimiento:**',
                         '• Acercarse a la oficina',
                         '• Carta solicitando cambio de plan',
@@ -653,7 +519,7 @@ def informacion_general():
                 },
                 {
                     'subtitulo': 'Traslado de Domicilio',
-                    'contenido_items': [  # CAMBIADO: items -> contenido_items
+                    'contenido_items': [
                         '**Costo:** $20.000',
                         '**Puntos adicionales:** $10.000 c/u (movimiento)',
                         '**Tiempo:** 2-3 días hábiles',
@@ -662,7 +528,7 @@ def informacion_general():
                 },
                 {
                     'subtitulo': 'Solicitud de Facturas',
-                    'contenido_items': [  # CAMBIADO: items -> contenido_items
+                    'contenido_items': [
                         '**Datos requeridos:**',
                         '• Contrato',
                         '• Nombre completo',
@@ -685,10 +551,10 @@ def informacion_general():
             'contenido': [
                 {
                     'subtitulo': 'Información de Contacto',
-                    'contenido_items': [  # CAMBIADO: items -> contenido_items
+                    'contenido_items': [
                         '**Email PQR:** pqr@mastvproducciones.net.co',
                         '**Email CARTERA:** auxiliaradministrativo@mastvproducciones.net.co',
-                        '**Email INGENIERIA: ingenieria@mastvproducciones.net.co',
+                        '**Email INGENIERIA:** ingenieria@mastvproducciones.net.co',
                         '**Email RECURSOS HUMANOS:** rh@mastvproducciones.net.co',
                         '**Chat de Soporte:** Solo mensajes escritos 3187777771',
                         '**No se reciben:** audios ni llamadas por WhatsApp'
@@ -699,7 +565,6 @@ def informacion_general():
     }
     
     return render_template('informacion_general.html', informacion=informacion)
-
 
 @app.route('/logout')
 @login_required
@@ -712,6 +577,9 @@ def logout():
 @app.route('/cambiar_password', methods=['GET', 'POST'])
 @login_required
 def cambiar_password():
+    cursor = None
+    conexion = None
+    
     if request.method == 'POST':
         password_actual = request.form['password_actual']
         nueva_password = request.form['nueva_password']
@@ -731,14 +599,14 @@ def cambiar_password():
             return render_template('cambiar_password.html')
         
         # Verificar contraseña actual
-        conexion = crear_conexion()
-        if conexion:
-            try:
-                cursor = conexion.cursor(dictionary=True)
+        try:
+            conexion = crear_conexion()
+            if conexion:
+                cursor = conexion.cursor()
                 cursor.execute("SELECT password FROM usuarios WHERE id = %s", (current_user.id,))
                 usuario = cursor.fetchone()
                 
-                if usuario and check_password_hash(usuario['password'], password_actual):
+                if usuario and check_password_hash(usuario[0], password_actual):
                     # Actualizar contraseña
                     hash_nueva_password = generate_password_hash(nueva_password)
                     cursor.execute(
@@ -750,12 +618,16 @@ def cambiar_password():
                     return redirect(url_for('index'))
                 else:
                     flash('La contraseña actual es incorrecta', 'error')
+            else:
+                flash('Error de conexión a la base de datos', 'error')
                     
-            except mysql.connector.Error as e:
-                flash('Error al cambiar la contraseña', 'error')
-                print(f"Error: {e}")
-            finally:
+        except Exception as e:
+            flash('Error al cambiar la contraseña', 'error')
+            print(f"Error en cambiar_password: {e}")
+        finally:
+            if cursor is not None:
                 cursor.close()
+            if conexion is not None:
                 conexion.close()
     
     return render_template('cambiar_password.html')
@@ -768,29 +640,47 @@ def gestion_usuarios():
         flash('No tienes permisos para acceder a esta página', 'error')
         return redirect(url_for('index'))
     
-    conexion = crear_conexion()
+    cursor = None
+    conexion = None
     usuarios = []
-    if conexion:
-        try:
-            cursor = conexion.cursor(dictionary=True)
+    
+    try:
+        conexion = crear_conexion()
+        if conexion:
+            cursor = conexion.cursor()
             cursor.execute("SELECT * FROM usuarios ORDER BY fecha_creacion DESC")
-            usuarios = cursor.fetchall()
+            usuarios_data = cursor.fetchall()
             
-            # Parsear permisos JSON para cada usuario
-            for usuario in usuarios:
-                if usuario.get('permisos'):
+            # Convertir tuplas a diccionarios
+            for usuario in usuarios_data:
+                usuario_dict = {
+                    'id': usuario[0],
+                    'usuario': usuario[1],
+                    'password': usuario[2],
+                    'rol': usuario[3],
+                    'permisos': usuario[4],
+                    'fecha_creacion': usuario[5],
+                    'fecha_actualizacion': usuario[6]
+                }
+                
+                # Parsear permisos JSON para cada usuario
+                if usuario_dict.get('permisos'):
                     try:
-                        usuario['permisos_parsed'] = json.loads(usuario['permisos'])
+                        usuario_dict['permisos_parsed'] = json.loads(usuario_dict['permisos'])
                     except:
-                        usuario['permisos_parsed'] = {}
+                        usuario_dict['permisos_parsed'] = {}
                 else:
-                    usuario['permisos_parsed'] = {}
+                    usuario_dict['permisos_parsed'] = {}
+                
+                usuarios.append(usuario_dict)
                     
-        except mysql.connector.Error as e:
-            flash('Error al cargar los usuarios', 'error')
-            print(f"Error: {e}")
-        finally:
+    except Exception as e:
+        flash('Error al cargar los usuarios', 'error')
+        print(f"Error en gestion_usuarios: {e}")
+    finally:
+        if cursor is not None:
             cursor.close()
+        if conexion is not None:
             conexion.close()
     
     return render_template('gestion_usuarios.html', usuarios=usuarios)
@@ -803,18 +693,21 @@ def editar_usuario(id):
         flash('No tienes permisos para realizar esta acción', 'error')
         return redirect(url_for('index'))
     
-    conexion = crear_conexion()
+    cursor = None
+    conexion = None
     usuario_data = None
-    if conexion:
-        try:
-            cursor = conexion.cursor(dictionary=True)
+    
+    try:
+        conexion = crear_conexion()
+        if conexion:
+            cursor = conexion.cursor()
             
             if request.method == 'POST':
                 usuario = request.form['usuario']
                 password = request.form['password']
                 rol = request.form['rol']
                 
-                # Obtener permisos del formulario (sin gestionar_usuarios)
+                # Obtener permisos del formulario
                 permisos = {
                     'ver_fichas': True,  # Siempre activo
                     'agregar_fichas': 'agregar_fichas' in request.form,
@@ -843,23 +736,36 @@ def editar_usuario(id):
             
             # GET: Cargar datos del usuario
             cursor.execute("SELECT * FROM usuarios WHERE id = %s", (id,))
-            usuario_data = cursor.fetchone()
+            usuario = cursor.fetchone()
             
-            if usuario_data and usuario_data.get('permisos'):
-                try:
-                    usuario_data['permisos_parsed'] = json.loads(usuario_data['permisos'])
-                except:
+            if usuario:
+                usuario_data = {
+                    'id': usuario[0],
+                    'usuario': usuario[1],
+                    'password': usuario[2],
+                    'rol': usuario[3],
+                    'permisos': usuario[4],
+                    'fecha_creacion': usuario[5],
+                    'fecha_actualizacion': usuario[6]
+                }
+                
+                if usuario_data.get('permisos'):
+                    try:
+                        usuario_data['permisos_parsed'] = json.loads(usuario_data['permisos'])
+                    except:
+                        usuario_data['permisos_parsed'] = {}
+                else:
                     usuario_data['permisos_parsed'] = {}
-            else:
-                usuario_data['permisos_parsed'] = {}
             
-        except psycopg2.IntegrityError:
-            flash('El usuario ya existe', 'error')
-        except mysql.connector.Error as e:
-            flash('Error al editar el usuario', 'error')
-            print(f"Error: {e}")
-        finally:
+    except psycopg2.IntegrityError:
+        flash('El usuario ya existe', 'error')
+    except Exception as e:
+        flash('Error al editar el usuario', 'error')
+        print(f"Error en editar_usuario: {e}")
+    finally:
+        if cursor is not None:
             cursor.close()
+        if conexion is not None:
             conexion.close()
     
     if not usuario_data:
@@ -876,6 +782,9 @@ def agregar_usuario():
         flash('No tienes permisos para realizar esta acción', 'error')
         return redirect(url_for('index'))
     
+    cursor = None
+    conexion = None
+    
     if request.method == 'POST':
         usuario = request.form['usuario']
         password = request.form['password']
@@ -885,7 +794,7 @@ def agregar_usuario():
             flash('Usuario y contraseña son obligatorios', 'error')
             return render_template('agregar_usuario.html')
         
-        # Obtener permisos del formulario (sin gestionar_usuarios)
+        # Obtener permisos del formulario
         permisos = {
             'ver_fichas': True,  # Siempre activo
             'agregar_fichas': 'agregar_fichas' in request.form,
@@ -897,9 +806,9 @@ def agregar_usuario():
         permisos_json = json.dumps(permisos)
         hash_password = generate_password_hash(password)
         
-        conexion = crear_conexion()
-        if conexion:
-            try:
+        try:
+            conexion = crear_conexion()
+            if conexion:
                 cursor = conexion.cursor()
                 cursor.execute(
                     "INSERT INTO usuarios (usuario, password, rol, permisos) VALUES (%s, %s, %s, %s)",
@@ -908,13 +817,15 @@ def agregar_usuario():
                 conexion.commit()
                 flash('Usuario agregado correctamente', 'success')
                 return redirect(url_for('gestion_usuarios'))
-            except psycopg2.IntegrityError:
-                flash('El usuario ya existe', 'error')
-            except mysql.connector.Error as e:
-                flash('Error al agregar el usuario', 'error')
-                print(f"Error: {e}")
-            finally:
+        except psycopg2.IntegrityError:
+            flash('El usuario ya existe', 'error')
+        except Exception as e:
+            flash('Error al agregar el usuario', 'error')
+            print(f"Error en agregar_usuario: {e}")
+        finally:
+            if cursor is not None:
                 cursor.close()
+            if conexion is not None:
                 conexion.close()
     
     return render_template('agregar_usuario.html')
@@ -931,18 +842,23 @@ def eliminar_usuario(id):
         flash('No puedes eliminar tu propio usuario', 'error')
         return redirect(url_for('gestion_usuarios'))
     
-    conexion = crear_conexion()
-    if conexion:
-        try:
+    cursor = None
+    conexion = None
+    
+    try:
+        conexion = crear_conexion()
+        if conexion:
             cursor = conexion.cursor()
             cursor.execute("DELETE FROM usuarios WHERE id = %s", (id,))
             conexion.commit()
             flash('Usuario eliminado correctamente', 'success')
-        except mysql.connector.Error as e:
-            flash('Error al eliminar el usuario', 'error')
-            print(f"Error: {e}")
-        finally:
+    except Exception as e:
+        flash('Error al eliminar el usuario', 'error')
+        print(f"Error en eliminar_usuario: {e}")
+    finally:
+        if cursor is not None:
             cursor.close()
+        if conexion is not None:
             conexion.close()
     
     return redirect(url_for('gestion_usuarios'))
@@ -955,21 +871,42 @@ def index():
         flash('No tienes permisos para ver las fichas', 'error')
         return redirect(url_for('login'))
     
-    conexion = crear_conexion()
+    cursor = None
+    conexion = None
     fichas = []
-    if conexion:
-        try:
-            cursor = conexion.cursor(dictionary=True)
+    
+    try:
+        conexion = crear_conexion()
+        if conexion:
+            cursor = conexion.cursor()
             cursor.execute("SELECT * FROM fichas ORDER BY fecha_actualizacion DESC")
-            fichas = cursor.fetchall()
-        except mysql.connector.Error as e:
-            flash('Error al cargar las fichas', 'error')
-            print(f"Error: {e}")
-        finally:
+            fichas_data = cursor.fetchall()
+            
+            # Convertir tuplas a diccionarios
+            for ficha in fichas_data:
+                ficha_dict = {
+                    'id': ficha[0],
+                    'categoria': ficha[1],
+                    'problema': ficha[2],
+                    'descripcion': ficha[3],
+                    'causas': ficha[4],
+                    'solucion': ficha[5],
+                    'palabras_clave': ficha[6],
+                    'fecha_creacion': ficha[7],
+                    'fecha_actualizacion': ficha[8]
+                }
+                fichas.append(ficha_dict)
+                
+    except Exception as e:
+        flash('Error al cargar las fichas', 'error')
+        print(f"Error en index: {e}")
+    finally:
+        if cursor is not None:
             cursor.close()
+        if conexion is not None:
             conexion.close()
     
-    return render_template('index.html', user=current_user)
+    return render_template('index.html', fichas=fichas, user=current_user)
 
 @app.route('/agregar', methods=['GET', 'POST'])
 @login_required
@@ -977,6 +914,9 @@ def agregar_ficha():
     if not current_user.puede('agregar_fichas'):
         flash('No tienes permisos para realizar esta acción', 'error')
         return redirect(url_for('index'))
+    
+    cursor = None
+    conexion = None
     
     if request.method == 'POST':
         # Obtener datos del formulario - manejar problema real o seleccionado
@@ -996,9 +936,9 @@ def agregar_ficha():
         causas_items = [item.strip() for item in causas.split('\n') if item.strip()]
         causas_str = '|'.join(causas_items)
         
-        conexion = crear_conexion()
-        if conexion:
-            try:
+        try:
+            conexion = crear_conexion()
+            if conexion:
                 cursor = conexion.cursor()
                 cursor.execute('''
                     INSERT INTO fichas (categoria, problema, descripcion, causas, solucion, palabras_clave)
@@ -1007,11 +947,13 @@ def agregar_ficha():
                 conexion.commit()
                 flash('Ficha agregada correctamente', 'success')
                 return redirect(url_for('index'))
-            except mysql.connector.Error as e:
-                flash('Error al agregar la ficha', 'error')
-                print(f"Error: {e}")
-            finally:
+        except Exception as e:
+            flash('Error al agregar la ficha', 'error')
+            print(f"Error en agregar_ficha: {e}")
+        finally:
+            if cursor is not None:
                 cursor.close()
+            if conexion is not None:
                 conexion.close()
     
     return render_template('agregar_ficha.html')
@@ -1023,11 +965,14 @@ def editar_ficha(id):
         flash('No tienes permisos para realizar esta acción', 'error')
         return redirect(url_for('index'))
     
-    conexion = crear_conexion()
+    cursor = None
+    conexion = None
     ficha = None
-    if conexion:
-        try:
-            cursor = conexion.cursor(dictionary=True)
+    
+    try:
+        conexion = crear_conexion()
+        if conexion:
+            cursor = conexion.cursor()
             
             if request.method == 'POST':
                 categoria = request.form['categoria']
@@ -1054,17 +999,32 @@ def editar_ficha(id):
             
             # GET: Cargar datos de la ficha
             cursor.execute("SELECT * FROM fichas WHERE id = %s", (id,))
-            ficha = cursor.fetchone()
+            ficha_data = cursor.fetchone()
             
-            # Convertir | de vuelta a saltos de línea para el formulario
-            if ficha and ficha['causas']:
-                ficha['causas'] = ficha['causas'].replace('|', '\n')
+            if ficha_data:
+                ficha = {
+                    'id': ficha_data[0],
+                    'categoria': ficha_data[1],
+                    'problema': ficha_data[2],
+                    'descripcion': ficha_data[3],
+                    'causas': ficha_data[4],
+                    'solucion': ficha_data[5],
+                    'palabras_clave': ficha_data[6],
+                    'fecha_creacion': ficha_data[7],
+                    'fecha_actualizacion': ficha_data[8]
+                }
+                
+                # Convertir | de vuelta a saltos de línea para el formulario
+                if ficha and ficha['causas']:
+                    ficha['causas'] = ficha['causas'].replace('|', '\n')
             
-        except mysql.connector.Error as e:
-            flash('Error al cargar/editar la ficha', 'error')
-            print(f"Error: {e}")
-        finally:
+    except Exception as e:
+        flash('Error al cargar/editar la ficha', 'error')
+        print(f"Error en editar_ficha: {e}")
+    finally:
+        if cursor is not None:
             cursor.close()
+        if conexion is not None:
             conexion.close()
     
     if not ficha:
@@ -1080,18 +1040,23 @@ def eliminar_ficha(id):
         flash('No tienes permisos para realizar esta acción', 'error')
         return redirect(url_for('index'))
     
-    conexion = crear_conexion()
-    if conexion:
-        try:
+    cursor = None
+    conexion = None
+    
+    try:
+        conexion = crear_conexion()
+        if conexion:
             cursor = conexion.cursor()
             cursor.execute("DELETE FROM fichas WHERE id = %s", (id,))
             conexion.commit()
             flash('Ficha eliminada correctamente', 'success')
-        except mysql.connector.Error as e:
-            flash('Error al eliminar la ficha', 'error')
-            print(f"Error: {e}")
-        finally:
+    except Exception as e:
+        flash('Error al eliminar la ficha', 'error')
+        print(f"Error en eliminar_ficha: {e}")
+    finally:
+        if cursor is not None:
             cursor.close()
+        if conexion is not None:
             conexion.close()
     
     return redirect(url_for('index'))
@@ -1106,11 +1071,14 @@ def buscar():
     query = request.args.get('q', '')
     categoria = request.args.get('categoria', '')
     
-    conexion = crear_conexion()
+    cursor = None
+    conexion = None
     fichas = []
-    if conexion:
-        try:
-            cursor = conexion.cursor(dictionary=True)
+    
+    try:
+        conexion = crear_conexion()
+        if conexion:
+            cursor = conexion.cursor()
             
             if categoria and query:
                 sql = "SELECT * FROM fichas WHERE categoria = %s AND (problema LIKE %s OR palabras_clave LIKE %s)"
@@ -1124,12 +1092,30 @@ def buscar():
             else:
                 cursor.execute("SELECT * FROM fichas ORDER BY fecha_actualizacion DESC")
             
-            fichas = cursor.fetchall()
-        except mysql.connector.Error as e:
-            flash('Error en la búsqueda', 'error')
-            print(f"Error: {e}")
-        finally:
+            fichas_data = cursor.fetchall()
+            
+            # Convertir tuplas a diccionarios
+            for ficha in fichas_data:
+                ficha_dict = {
+                    'id': ficha[0],
+                    'categoria': ficha[1],
+                    'problema': ficha[2],
+                    'descripcion': ficha[3],
+                    'causas': ficha[4],
+                    'solucion': ficha[5],
+                    'palabras_clave': ficha[6],
+                    'fecha_creacion': ficha[7],
+                    'fecha_actualizacion': ficha[8]
+                }
+                fichas.append(ficha_dict)
+                
+    except Exception as e:
+        flash('Error en la búsqueda', 'error')
+        print(f"Error en buscar: {e}")
+    finally:
+        if cursor is not None:
             cursor.close()
+        if conexion is not None:
             conexion.close()
     
     return render_template('buscar.html', fichas=fichas, query=query, categoria=categoria)
@@ -1141,18 +1127,37 @@ def ver_ficha(id):
         flash('No tienes permisos para ver las fichas', 'error')
         return redirect(url_for('index'))
     
-    conexion = crear_conexion()
+    cursor = None
+    conexion = None
     ficha = None
-    if conexion:
-        try:
-            cursor = conexion.cursor(dictionary=True)
+    
+    try:
+        conexion = crear_conexion()
+        if conexion:
+            cursor = conexion.cursor()
             cursor.execute("SELECT * FROM fichas WHERE id = %s", (id,))
-            ficha = cursor.fetchone()
-        except mysql.connector.Error as e:
-            flash('Error al cargar la ficha', 'error')
-            print(f"Error: {e}")
-        finally:
+            ficha_data = cursor.fetchone()
+            
+            if ficha_data:
+                ficha = {
+                    'id': ficha_data[0],
+                    'categoria': ficha_data[1],
+                    'problema': ficha_data[2],
+                    'descripcion': ficha_data[3],
+                    'causas': ficha_data[4],
+                    'solucion': ficha_data[5],
+                    'palabras_clave': ficha_data[6],
+                    'fecha_creacion': ficha_data[7],
+                    'fecha_actualizacion': ficha_data[8]
+                }
+                
+    except Exception as e:
+        flash('Error al cargar la ficha', 'error')
+        print(f"Error en ver_ficha: {e}")
+    finally:
+        if cursor is not None:
             cursor.close()
+        if conexion is not None:
             conexion.close()
     
     if not ficha:
@@ -1197,7 +1202,5 @@ def obtener_problemas(categoria):
 if __name__ == '__main__':
     with app.app_context():
         print("🚀 Iniciando aplicación Flask...")
-        # Solo crear tablas cuando se ejecute la app, no en import
-        from database import crear_tablas
         crear_tablas()
     app.run(host='0.0.0.0', port=5000, debug=True)
