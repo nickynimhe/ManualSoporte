@@ -73,13 +73,21 @@
     .alert-close:hover {
       opacity: 1;
     }
+
+    /* Estilos para el logo de la empresa */
+    .company-logo {
+      max-width: 120px;
+      height: auto;
+      margin-bottom: 15px;
+    }
   </style>
 </head>
 <body>
 
   <div class="login-card">
     <div class="login-header">
-      <i class="fas fa-satellite-dish"></i>
+      <!-- Reemplazar el icono de la antena por el logo de la empresa -->
+      <img src="{{ url_for('static', filename='img/logo.png') }}" alt="PRODUCCIONES S.A.S" class="company-logo">
       <h1>MANUAL ASESOR</h1>
       <p>Ingresa tus credenciales para continuar</p>
     </div>
