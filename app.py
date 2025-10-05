@@ -18,9 +18,11 @@ login_manager.login_message = 'Por favor inicia sesión para acceder a esta pág
 
 # Función para inicializar datos en la base de datos
 def inicializar_datos():
-    conexion = crear_conexion()
-    if conexion:
-        try:
+    cursor = None  # ✅ INICIALIZAR
+    conexion = None  # ✅ INICIALIZAR
+    try:
+        conexion = crear_conexion()
+        if conexion:
             cursor = conexion.cursor()
             
             # Verificar si ya existen datos
@@ -79,11 +81,15 @@ def inicializar_datos():
             conexion.commit()
             print("Base de datos inicializada correctamente")
             
-        except mysql.connector.Error as e:
-            print(f"Error al inicializar datos: {e}")
+    except Exception as e:
+        print(f"Error al inicializar datos: {e}")
+        if conexion:
             conexion.rollback()
-        finally:
+    finally:
+        # ✅ VERIFICAR ANTES DE CERRAR
+        if cursor is not None:
             cursor.close()
+        if conexion is not None:
             conexion.close()
     else:
         print("No se pudo conectar a la base de datos para inicializar")
