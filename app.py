@@ -193,9 +193,11 @@ class User(UserMixin):
 
 @login_manager.user_loader
 def load_user(user_id):
-    conexion = crear_conexion()
-    if conexion:
-        try:
+    cursor = None  # ✅ INICIALIZAR
+    conexion = None  # ✅ INICIALIZAR
+    try:
+        conexion = crear_conexion()
+        if conexion:
             cursor = conexion.cursor(dictionary=True)
             cursor.execute("SELECT * FROM usuarios WHERE id = %s", (user_id,))
             user_data = cursor.fetchone()
@@ -214,10 +216,13 @@ def load_user(user_id):
                     user_data['rol'],
                     permisos
                 )
-        except mysql.connector.Error as e:
-            print(f"Error: {e}")
-        finally:
+    except Exception as e:
+        print(f"Error: {e}")
+    finally:
+        # ✅ VERIFICAR ANTES DE CERRAR
+        if cursor is not None:
             cursor.close()
+        if conexion is not None:
             conexion.close()
     return None
 
