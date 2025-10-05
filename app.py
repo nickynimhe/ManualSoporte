@@ -241,14 +241,17 @@ def login():
     if current_user.is_authenticated:
         return redirect(url_for('index'))
     
+    cursor = None  # ✅ INICIALIZAR LA VARIABLE AL PRINCIPIO
+    conexion = None  # ✅ INICIALIZAR LA CONEXIÓN TAMBIÉN
+    
     if request.method == 'POST':
         usuario = request.form['usuario']
         password = request.form['password']
         
-        conexion = crear_conexion()
-        if conexion:
-            try:
-                cursor = conexion.cursor(dictionary=True)
+        try:
+            conexion = crear_conexion()
+            if conexion:
+                cursor = conexion.cursor(dictionary=True)  # ✅ ASIGNAR DENTRO DEL TRY
                 cursor.execute("SELECT * FROM usuarios WHERE usuario = %s", (usuario,))
                 user_data = cursor.fetchone()
                 
@@ -271,14 +274,18 @@ def login():
                 else:
                     flash('Usuario no encontrado', 'error')
                     
-            except Exception as e:
-                flash('Error de base de datos', 'error')
-                print(f"Error: {e}")
-            finally:
+            else:
+                flash('Error de conexión a la base de datos', 'error')
+                
+        except Exception as e:
+            flash('Error de base de datos', 'error')
+            print(f"Error: {e}")
+        finally:
+            # ✅ VERIFICAR ANTES DE CERRAR
+            if cursor is not None:
                 cursor.close()
+            if conexion is not None:
                 conexion.close()
-        else:
-            flash('Error de conexión a la base de datos', 'error')
     
     return render_template('login.html')
 
