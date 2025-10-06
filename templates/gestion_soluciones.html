@@ -11,7 +11,7 @@
                 <div class="d-flex align-items-center">
                     <div class="header-icon-wrapper me-4">
                         <div class="corporate-icon">
-                            <i class="fas fa-tasks"></i>
+                            <i class="fas fa-cogs"></i>
                         </div>
                     </div>
                     <div class="flex-grow-1">
@@ -19,8 +19,8 @@
                             Gestión de Soluciones Visuales
                         </h1>
                         <p class="corporate-subtitle mb-0">
-                            <i class="fas fa-cogs me-2"></i>
-                            Administra las soluciones paso a paso para Vortex y Softv
+                            <i class="fas fa-tasks me-2"></i>
+                            Administra y edita todas las soluciones visuales
                         </p>
                     </div>
                 </div>
@@ -40,143 +40,116 @@
         </div>
     </div>
 
-    <!-- Botón para agregar nueva solución -->
+    <!-- Botones de acción -->
     <div class="row mb-4">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center">
-                <h3 class="section-title">Soluciones Existentes</h3>
-                <a href="{{ url_for('agregar_solucion') }}" class="btn corporate-btn">
-                    <i class="fas fa-plus me-2"></i>Nueva Solución
-                </a>
+                <h3 class="section-title">Todas las Soluciones</h3>
+                <div>
+                    <a href="{{ url_for('agregar_solucion') }}" class="btn corporate-btn me-2">
+                        <i class="fas fa-plus me-2"></i>Nueva Solución
+                    </a>
+                    <a href="{{ url_for('soluciones_visuales') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-eye me-2"></i>Ver Soluciones
+                    </a>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Filtros Corporativos -->
-    <div class="row mb-4">
+    <!-- Tabla de soluciones -->
+    <div class="row">
         <div class="col-12">
-            <div class="corporate-filters">
-                <div class="filter-header">
-                    <i class="fas fa-filter me-2"></i>
-                    Filtrar por servicio
-                </div>
-                <div class="filter-buttons">
-                    <button class="btn filter-btn corporate-filter active" data-service="all">
-                        <i class="fas fa-layer-group me-2"></i>Todas las Soluciones
-                    </button>
-                    <button class="btn filter-btn corporate-filter vortex-filter" data-service="Vortex">
-                        <i class="fas fa-satellite-dish me-2"></i>Servicios Vortex
-                    </button>
-                    <button class="btn filter-btn corporate-filter softv-filter" data-service="Softv">
-                        <i class="fas fa-tv me-2"></i>Servicios Softv
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Grid de Soluciones Mejorado -->
-    <div class="row g-4" id="solucionesGrid">
-        {% for solucion in soluciones %}
-        <div class="col-xl-4 col-lg-6 col-md-6 solution-item" data-service="{{ solucion.categoria }}">
-            <div class="corporate-card solution-card h-100">
-                <div class="card-image-container">
-                    {% if solucion.imagen_principal and solucion.imagen_principal != 'None' %}
-                    <img src="{{ url_for('static', filename='img/soluciones/' + solucion.imagen_principal) }}" 
-                         class="card-image" 
-                         alt="{{ solucion.titulo }}"
-                         loading="lazy"
-                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+            <div class="corporate-card">
+                <div class="card-body">
+                    {% if soluciones %}
+                    <div class="table-responsive">
+                        <table class="table corporate-table">
+                            <thead>
+                                <tr>
+                                    <th>Título</th>
+                                    <th>Categoría</th>
+                                    <th>Pasos</th>
+                                    <th>Estado</th>
+                                    <th>Última Actualización</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for solucion in soluciones %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            {% if solucion.imagen and solucion.imagen.url %}
+                                            <img src="{{ url_for('static', filename=solucion.imagen.url) }}" 
+                                                 class="rounded me-3" 
+                                                 alt="{{ solucion.titulo }}"
+                                                 style="width: 40px; height: 40px; object-fit: cover;"
+                                                 onerror="this.style.display='none'">
+                                            {% endif %}
+                                            <div>
+                                                <strong>{{ solucion.titulo }}</strong>
+                                                {% if solucion.descripcion %}
+                                                <br><small class="text-muted">{{ solucion.descripcion[:50] }}{% if solucion.descripcion|length > 50 %}...{% endif %}</small>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if solucion.categoria == 'Vortex' %}vortex-badge{% else %}softv-badge{% endif %}">
+                                            <i class="fas {% if solucion.categoria == 'Vortex' %}fa-satellite-dish{% else %}fa-tv{% endif %} me-1"></i>
+                                            {{ solucion.categoria }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">
+                                            <i class="fas fa-steps me-1"></i>
+                                            {{ solucion.pasos|length }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if solucion.estado == 'activo' %}badge-activo{% else %}badge-inactivo{% endif %}">
+                                            {{ solucion.estado }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">
+                                            {{ solucion.fecha_actualizacion.strftime('%d/%m/%Y %H:%M') if solucion.fecha_actualizacion else 'N/A' }}
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group">
+                                            <a href="{{ url_for('editar_solucion', id=solucion.id) }}" 
+                                               class="btn btn-sm btn-action btn-edit"
+                                               title="Editar">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            {% if solucion.estado == 'activo' %}
+                                            <a href="{{ url_for('soluciones_visuales') }}#{{ solucion.id }}" 
+                                               class="btn btn-sm btn-action btn-primary"
+                                               title="Ver">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="empty-state-corporate text-center py-5">
+                        <div class="empty-icon-corporate mb-4">
+                            <i class="fas fa-file-alt"></i>
+                        </div>
+                        <h4 class="empty-title mb-3">No hay soluciones creadas</h4>
+                        <p class="empty-description mb-4">Comienza creando tu primera solución visual</p>
+                        <a href="{{ url_for('agregar_solucion') }}" class="btn corporate-btn">
+                            <i class="fas fa-plus me-2"></i>Crear Primera Solución
+                        </a>
+                    </div>
                     {% endif %}
-                    <div class="card-image-placeholder {% if solucion.imagen_principal and solucion.imagen_principal != 'None' %}d-none{% endif %}">
-                        <i class="fas fa-images"></i>
-                        <span>Sin imagen principal</span>
-                    </div>
-                    <div class="card-badge {% if solucion.categoria == 'Vortex' %}vortex-badge{% else %}softv-badge{% endif %}">
-                        <i class="fas {% if solucion.categoria == 'Vortex' %}fa-satellite-dish{% else %}fa-tv{% endif %} me-1"></i>
-                        {{ solucion.categoria }}
-                    </div>
-                    <div class="card-overlay">
-                        <div class="overlay-content">
-                            <span class="steps-indicator">
-                                <i class="fas fa-images me-1"></i>
-                                {{ solucion.pasos|length if solucion.pasos else 0 }} pasos
-                            </span>
-                            <div class="d-flex gap-2">
-                                <button class="btn view-btn view-solution" data-solution-id="{{ solucion.id }}">
-                                    <i class="fas fa-eye me-1"></i>Vista Previa
-                                </button>
-                                <a href="{{ url_for('editar_solucion', id=solucion.id) }}" class="btn view-btn">
-                                    <i class="fas fa-edit me-1"></i>Editar
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-content">
-                    <h5 class="card-title">{{ solucion.titulo }}</h5>
-                    <p class="card-description">{{ solucion.descripcion[:100] }}{% if solucion.descripcion|length > 100 %}...{% endif %}</p>
-                    <div class="card-footer">
-                        <div class="service-tag {% if solucion.categoria == 'Vortex' %}vortex-tag{% else %}softv-tag{% endif %}">
-                            <i class="fas {% if solucion.categoria == 'Vortex' %}fa-bolt{% else %}fa-play-circle{% endif %} me-1"></i>
-                            {{ solucion.categoria }}
-                        </div>
-                        <div class="action-buttons">
-                            <span class="badge-estado {% if solucion.estado == 'activo' %}badge-activo{% else %}badge-inactivo{% endif %}">
-                                {{ solucion.estado }}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% else %}
-        <div class="col-12">
-            <div class="empty-state-corporate text-center py-5">
-                <div class="empty-icon-corporate mb-4">
-                    <i class="fas fa-file-alt"></i>
-                </div>
-                <h4 class="empty-title mb-3">No hay soluciones creadas</h4>
-                <p class="empty-description mb-4">Comienza creando tu primera solución visual</p>
-                <a href="{{ url_for('agregar_solucion') }}" class="btn corporate-btn">
-                    <i class="fas fa-plus me-2"></i>Crear Primera Solución
-                </a>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-</div>
-
-<!-- Modal para Vista Previa -->
-<div class="modal fade" id="previewModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered">
-        <div class="modal-content corporate-modal">
-            <div class="modal-header corporate-modal-header">
-                <div class="modal-title-content">
-                    <h5 class="modal-title" id="previewModalTitle">Vista Previa de Solución</h5>
-                    <div class="modal-subtitle" id="previewSubtitle"></div>
-                </div>
-                <button type="button" class="btn-close btn-close-corporate" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div id="previewCarousel" class="carousel slide corporate-carousel" data-bs-ride="false">
-                    <div class="carousel-indicators corporate-indicators" id="previewIndicators"></div>
-                    <div class="carousel-inner corporate-carousel-inner" id="previewInner"></div>
-                    <button class="carousel-control-prev corporate-control" type="button" data-bs-target="#previewCarousel" data-bs-slide="prev">
-                        <span class="carousel-control-prev-icon corporate-control-icon"></span>
-                        <span class="visually-hidden">Anterior</span>
-                    </button>
-                    <button class="carousel-control-next corporate-control" type="button" data-bs-target="#previewCarousel" data-bs-slide="next">
-                        <span class="carousel-control-next-icon corporate-control-icon"></span>
-                        <span class="visually-hidden">Siguiente</span>
-                    </button>
-                </div>
-                <div class="step-info-corporate">
-                    <div class="step-header">
-                        <h6 id="previewStepTitle" class="step-title"></h6>
-                        <div class="step-counter" id="previewStepCounter">Paso 1 de 1</div>
-                    </div>
-                    <p id="previewStepDescription" class="step-description"></p>
                 </div>
             </div>
         </div>
@@ -184,76 +157,37 @@
 </div>
 
 <style>
-/* Estilos específicos para gestión */
 .section-title {
     color: var(--corporate-blue);
     font-weight: 700;
     margin-bottom: 0;
 }
 
-.card-image-container {
-    position: relative;
-    height: 220px;
-    overflow: hidden;
-    background: var(--corporate-gray-light);
-}
-
-.card-image-placeholder {
-    width: 100%;
-    height: 100%;
-    background: var(--corporate-gray-light);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    color: var(--corporate-gray);
-}
-
-.card-image-placeholder i {
-    font-size: 2rem;
-    margin-bottom: 0.5rem;
-}
-
-.badge-estado {
+.badge {
     padding: 0.5rem 1rem;
     border-radius: 20px;
     font-size: 0.8rem;
     font-weight: 600;
 }
 
+.vortex-badge {
+    background: var(--corporate-purple);
+    color: white;
+}
+
+.softv-badge {
+    background: var(--corporate-blue);
+    color: white;
+}
+
 .badge-activo {
-    background: var(--corporate-blue-light);
-    color: var(--corporate-blue);
+    background: var(--corporate-green-light);
+    color: var(--corporate-green);
 }
 
 .badge-inactivo {
     background: var(--corporate-red-light);
     color: var(--corporate-red);
-}
-
-/* Asegurar que los estilos corporativos se apliquen */
-.corporate-table {
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
-}
-
-.corporate-table th {
-    background: var(--corporate-blue-light);
-    color: var(--corporate-blue);
-    font-weight: 600;
-    padding: 1rem;
-    border-bottom: 2px solid var(--corporate-blue);
-}
-
-.corporate-table td {
-    padding: 1rem;
-    vertical-align: middle;
-    border-bottom: 1px solid var(--corporate-blue-light);
-}
-
-.corporate-table tbody tr:hover {
-    background: var(--corporate-blue-light);
 }
 
 .btn-action {
@@ -274,209 +208,14 @@
     color: var(--corporate-white);
 }
 
-.btn-delete {
-    background: var(--corporate-red-light);
-    color: var(--corporate-red);
+.btn-primary {
+    background: var(--corporate-purple-light);
+    color: var(--corporate-purple);
 }
 
-.btn-delete:hover {
-    background: var(--corporate-red);
+.btn-primary:hover {
+    background: var(--corporate-purple);
     color: var(--corporate-white);
 }
-
-/* Estilos para el carousel en el modal */
-.carousel-image-container {
-    position: relative;
-    height: 400px;
-    background: var(--corporate-gray-light);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1rem;
-}
-
-.carousel-image {
-    max-height: 100%;
-    max-width: 100%;
-    object-fit: contain;
-    border-radius: 8px;
-}
-
-.image-fallback {
-    text-align: center;
-    color: var(--corporate-gray);
-    padding: 2rem;
-}
-
-.image-fallback i {
-    margin-bottom: 1rem;
-    color: var(--corporate-blue);
-}
 </style>
-
-<script>
-// Datos de ejemplo para las soluciones (en producción esto vendría del servidor)
-const SOLUTIONS_DATA = {
-    {% for solucion in soluciones %}
-    {{ solucion.id }}: {
-        titulo: "{{ solucion.titulo | replace('"', '\\"') }}",
-        servicio: "{{ solucion.categoria | replace('"', '\\"') }}",
-        pasos: [
-            {% for paso in solucion.pasos %}
-            {
-                imagen: "{{ paso.imagen | default('', true) | replace('"', '\\"') }}",
-                titulo: "{{ paso.titulo | replace('"', '\\"') }}",
-                descripcion: "{{ paso.descripcion | replace('"', '\\"') }}"
-            }{% if not loop.last %},{% endif %}
-            {% endfor %}
-        ]
-    }{% if not loop.last %},{% endif %}
-    {% endfor %}
-};
-
-document.addEventListener('DOMContentLoaded', function() {
-    // Filtrado por servicio
-    const serviceFilters = document.querySelectorAll('.corporate-filter');
-    const solutionItems = document.querySelectorAll('.solution-item');
-    
-    serviceFilters.forEach(filter => {
-        filter.addEventListener('click', function() {
-            const service = this.getAttribute('data-service');
-            
-            // Actualizar filtros activos
-            serviceFilters.forEach(btn => btn.classList.remove('active'));
-            this.classList.add('active');
-            
-            // Filtrar soluciones
-            let visibleCount = 0;
-            solutionItems.forEach(item => {
-                const itemService = item.getAttribute('data-service');
-                
-                if (service === 'all' || itemService === service) {
-                    item.style.display = 'block';
-                    visibleCount++;
-                } else {
-                    item.style.display = 'none';
-                }
-            });
-        });
-    });
-    
-    // Vista previa de soluciones
-    const previewModal = new bootstrap.Modal(document.getElementById('previewModal'));
-    let currentCarouselHandler = null;
-    
-    document.addEventListener('click', function(e) {
-        if (e.target.classList.contains('view-solution') || e.target.closest('.view-solution')) {
-            const button = e.target.classList.contains('view-solution') ? e.target : e.target.closest('.view-solution');
-            const solutionId = button.getAttribute('data-solution-id');
-            loadSolutionPreview(solutionId);
-        }
-    });
-    
-    function loadSolutionPreview(solutionId) {
-        const solutionData = SOLUTIONS_DATA[solutionId];
-        
-        if (!solutionData || !solutionData.pasos || solutionData.pasos.length === 0) {
-            alert('Esta solución no tiene pasos configurados o está en desarrollo.');
-            return;
-        }
-        
-        // Configurar modal
-        document.getElementById('previewModalTitle').textContent = solutionData.titulo;
-        document.getElementById('previewSubtitle').textContent = `${solutionData.servicio} - ${solutionData.pasos.length} pasos`;
-        
-        // Construir carousel
-        buildPreviewCarousel(solutionData);
-        
-        // Mostrar modal
-        previewModal.show();
-    }
-    
-    function buildPreviewCarousel(solutionData) {
-        const carouselInner = document.getElementById('previewInner');
-        const carouselIndicators = document.getElementById('previewIndicators');
-        
-        // Limpiar contenido anterior
-        carouselInner.innerHTML = '';
-        carouselIndicators.innerHTML = '';
-        
-        // Construir indicadores e imágenes
-        solutionData.pasos.forEach((paso, index) => {
-            // Crear indicador
-            const indicator = document.createElement('button');
-            indicator.type = 'button';
-            indicator.setAttribute('data-bs-target', '#previewCarousel');
-            indicator.setAttribute('data-bs-slide-to', index.toString());
-            indicator.setAttribute('aria-label', `Paso ${index + 1}`);
-            if (index === 0) {
-                indicator.classList.add('active');
-                indicator.setAttribute('aria-current', 'true');
-            }
-            carouselIndicators.appendChild(indicator);
-            
-            // Crear item del carousel
-            const carouselItem = document.createElement('div');
-            carouselItem.className = `carousel-item ${index === 0 ? 'active' : ''}`;
-            
-            // Manejar imágenes - si no hay imagen, mostrar placeholder
-            const imagePath = paso.imagen && paso.imagen !== 'None' 
-                ? `/static/img/soluciones/${paso.imagen}`
-                : '';
-            
-            carouselItem.innerHTML = `
-                <div class="carousel-image-container">
-                    ${imagePath ? `
-                        <img src="${imagePath}" 
-                             class="carousel-image" 
-                             alt="${paso.titulo}"
-                             loading="lazy"
-                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                    ` : ''}
-                    <div class="image-fallback ${imagePath ? 'd-none' : ''}">
-                        <i class="fas fa-image fa-3x mb-3"></i>
-                        <p>Imagen no disponible</p>
-                        <small class="text-muted">Paso ${index + 1}</small>
-                    </div>
-                </div>
-            `;
-            carouselInner.appendChild(carouselItem);
-        });
-        
-        // Actualizar información del primer paso
-        if (solutionData.pasos.length > 0) {
-            updatePreviewStepInfo(0, solutionData.pasos[0], solutionData.pasos.length);
-        }
-        
-        // Configurar event listener del carousel
-        if (currentCarouselHandler) {
-            document.getElementById('previewCarousel').removeEventListener('slid.bs.carousel', currentCarouselHandler);
-        }
-        
-        currentCarouselHandler = function(event) {
-            const activeIndex = event.to;
-            updatePreviewStepInfo(activeIndex, solutionData.pasos[activeIndex], solutionData.pasos.length);
-        };
-        
-        document.getElementById('previewCarousel').addEventListener('slid.bs.carousel', currentCarouselHandler);
-    }
-    
-    function updatePreviewStepInfo(index, paso, totalSteps) {
-        document.getElementById('previewStepTitle').textContent = paso.titulo || `Paso ${index + 1}`;
-        document.getElementById('previewStepDescription').textContent = paso.descripcion || 'Descripción no disponible';
-        document.getElementById('previewStepCounter').textContent = `Paso ${index + 1} de ${totalSteps}`;
-    }
-    
-    // Manejo de errores de imágenes en las tarjetas
-    document.querySelectorAll('.card-image').forEach(img => {
-        img.addEventListener('error', function() {
-            this.style.display = 'none';
-            const placeholder = this.nextElementSibling;
-            if (placeholder && placeholder.classList.contains('card-image-placeholder')) {
-                placeholder.style.display = 'flex';
-            }
-        });
-    });
-});
-</script>
 {% endblock %}
