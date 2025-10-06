@@ -1,0 +1,527 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Solución Visual{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header Corporativo -->
+    <div class="corporate-header mb-5">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <div class="d-flex align-items-center">
+                    <div class="header-icon-wrapper me-4">
+                        <div class="corporate-icon">
+                            <i class="fas fa-edit"></i>
+                        </div>
+                    </div>
+                    <div class="flex-grow-1">
+                        <h1 class="corporate-title mb-2">
+                            Editar Solución Visual
+                        </h1>
+                        <p class="corporate-subtitle mb-0">
+                            <i class="fas fa-images me-2"></i>
+                            Modifica la solución paso a paso
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="corporate-stats">
+                    <div class="stat-item vortex-stat">
+                        <div class="stat-number">{{ solucion.id }}</div>
+                        <div class="stat-label">ID Solución</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulario -->
+    <div class="row">
+        <div class="col-12">
+            <div class="corporate-card">
+                <div class="card-content">
+                    <form method="POST" id="solucionForm">
+                        <!-- Información básica -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="titulo" class="form-label">Título de la Solución *</label>
+                                    <input type="text" class="form-control" id="titulo" name="titulo" value="{{ solucion.titulo }}" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="categoria" class="form-label">Categoría *</label>
+                                    <select class="form-control" id="categoria" name="categoria" required>
+                                        <option value="Vortex" {% if solucion.categoria == 'Vortex' %}selected{% endif %}>Vortex</option>
+                                        <option value="Softv" {% if solucion.categoria == 'Softv' %}selected{% endif %}>Softv</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group mb-4">
+                            <label for="descripcion" class="form-label">Descripción *</label>
+                            <textarea class="form-control" id="descripcion" name="descripcion" rows="3" required>{{ solucion.descripcion }}</textarea>
+                        </div>
+
+                        <!-- Sección de pasos -->
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h4 class="mb-0">Pasos de la Solución</h4>
+                                <button type="button" class="btn corporate-btn" id="btnAgregarPaso">
+                                    <i class="fas fa-plus me-2"></i>Agregar Paso
+                                </button>
+                            </div>
+                            
+                            <div id="pasosContainer">
+                                <!-- Los pasos existentes se cargan aquí -->
+                                {% if solucion.pasos %}
+                                    {% for paso in solucion.pasos %}
+                                    <div class="paso-item" data-paso-index="{{ loop.index0 }}">
+                                        <div class="paso-header">
+                                            <div class="d-flex align-items-center gap-3">
+                                                <div class="paso-number">{{ loop.index }}</div>
+                                                <h5 class="mb-0">Paso {{ loop.index }}</h5>
+                                            </div>
+                                            <div class="paso-actions">
+                                                <button type="button" class="btn btn-action btn-upload" data-paso-index="{{ loop.index0 }}">
+                                                    <i class="fas fa-image"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-action btn-delete" data-paso-index="{{ loop.index0 }}">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label class="form-label">Título del Paso *</label>
+                                                    <input type="text" class="form-control" name="paso_titulo_{{ loop.index0 }}" value="{{ paso.titulo }}" required>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label class="form-label">Imagen</label>
+                                                    <div class="imagen-actual mb-2">
+                                                        {% if paso.imagen %}
+                                                        <div class="paso-con-imagen">
+                                                            <img src="{{ url_for('static', filename='img/soluciones/' + paso.imagen) }}" 
+                                                                 class="paso-imagen-preview" 
+                                                                 alt="Imagen del paso"
+                                                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                                            <div class="paso-sin-imagen" style="display: none;">
+                                                                <i class="fas fa-exclamation-triangle"></i>
+                                                                <small class="d-block mt-1">Imagen no encontrada</small>
+                                                            </div>
+                                                            <small class="d-block mt-1 text-muted">
+                                                                {{ paso.imagen.split('/')[-1] if '/' in paso.imagen else paso.imagen }}
+                                                            </small>
+                                                        </div>
+                                                        {% else %}
+                                                        <div class="paso-sin-imagen">
+                                                            <i class="fas fa-camera"></i>
+                                                            <small class="d-block mt-1">Sin imagen</small>
+                                                        </div>
+                                                        {% endif %}
+                                                    </div>
+                                                    <input type="hidden" name="paso_imagen_{{ loop.index0 }}" value="{{ paso.imagen }}">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Descripción *</label>
+                                            <textarea class="form-control" name="paso_descripcion_{{ loop.index0 }}" rows="2" required>{{ paso.descripcion }}</textarea>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <!-- Si no hay pasos, mostrar un paso vacío -->
+                                    <div class="paso-item" data-paso-index="0">
+                                        <div class="paso-header">
+                                            <div class="d-flex align-items-center gap-3">
+                                                <div class="paso-number">1</div>
+                                                <h5 class="mb-0">Paso 1</h5>
+                                            </div>
+                                            <div class="paso-actions">
+                                                <button type="button" class="btn btn-action btn-upload" data-paso-index="0">
+                                                    <i class="fas fa-image"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-action btn-delete" data-paso-index="0" disabled>
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label class="form-label">Título del Paso *</label>
+                                                    <input type="text" class="form-control" name="paso_titulo_0" required>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label class="form-label">Imagen</label>
+                                                    <div class="imagen-actual mb-2">
+                                                        <div class="paso-sin-imagen">
+                                                            <i class="fas fa-camera"></i>
+                                                            <small class="d-block mt-1">Sin imagen</small>
+                                                        </div>
+                                                    </div>
+                                                    <input type="hidden" name="paso_imagen_0" value="">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Descripción *</label>
+                                            <textarea class="form-control" name="paso_descripcion_0" rows="2" required></textarea>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="{{ url_for('gestion_soluciones') }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Cancelar
+                            </a>
+                            <button type="submit" class="btn corporate-btn">
+                                <i class="fas fa-save me-2"></i>Actualizar Solución
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+:root {
+    --corporate-blue: #052398;
+    --corporate-blue-light: #e0f2fe;
+    --corporate-red: #ff0000;
+    --corporate-red-light: #ffe6e6;
+    --corporate-white: #ffffff;
+    --corporate-gray: #6b7280;
+    --corporate-gray-light: #f9fafb;
+    --corporate-shadow: 0 4px 6px -1px rgba(5, 35, 152, 0.1), 0 2px 4px -1px rgba(5, 35, 152, 0.06);
+    --corporate-radius: 12px;
+}
+
+.paso-item {
+    background: var(--corporate-gray-light);
+    border-radius: var(--corporate-radius);
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    border-left: 4px solid var(--corporate-blue);
+}
+
+.paso-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.paso-number {
+    background: var(--corporate-blue);
+    color: var(--corporate-white);
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.paso-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.paso-sin-imagen {
+    width: 100px;
+    height: 80px;
+    background: var(--corporate-gray-light);
+    border: 2px dashed var(--corporate-gray);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--corporate-gray);
+    flex-direction: column;
+    text-align: center;
+}
+
+.paso-con-imagen {
+    text-align: center;
+}
+
+.paso-imagen-preview {
+    width: 100px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 2px solid var(--corporate-blue-light);
+}
+
+.btn-action {
+    padding: 0.25rem 0.5rem;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.btn-upload {
+    background: var(--corporate-gray-light);
+    color: var(--corporate-gray);
+}
+
+.btn-upload:hover {
+    background: var(--corporate-blue);
+    color: var(--corporate-white);
+}
+
+.btn-delete {
+    background: var(--corporate-red-light);
+    color: var(--corporate-red);
+}
+
+.btn-delete:hover {
+    background: var(--corporate-red);
+    color: var(--corporate-white);
+}
+
+.btn-delete:disabled {
+    background: var(--corporate-gray-light);
+    color: var(--corporate-gray);
+    cursor: not-allowed;
+}
+
+.corporate-btn {
+    background: var(--corporate-blue);
+    color: var(--corporate-white);
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--corporate-radius);
+    font-weight: 600;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.corporate-btn:hover {
+    background: #031a7a;
+    color: var(--corporate-white);
+    transform: translateY(-2px);
+}
+
+.form-control {
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 0.75rem;
+}
+
+.form-control:focus {
+    border-color: var(--corporate-blue);
+    box-shadow: 0 0 0 3px rgba(5, 35, 152, 0.1);
+}
+</style>
+
+<script>
+// Funciones globales
+function mostrarModalImagen(index) {
+    alert('Funcionalidad de subir imagen para el paso ' + (parseInt(index) + 1) + '. En una implementación real, aquí se abriría un modal para subir la imagen.');
+    
+    // Simular subida de imagen
+    const imagenInput = document.querySelector('input[name="paso_imagen_' + index + '"]');
+    const imagenActualDiv = document.querySelector('.paso-item[data-paso-index="' + index + '"] .imagen-actual');
+    
+    if (imagenInput && imagenActualDiv) {
+        // Generar nombre de imagen según la categoría
+        const categoriaSelect = document.getElementById('categoria');
+        const categoria = categoriaSelect ? categoriaSelect.value.toLowerCase() : 'softv';
+        const nombreImagen = categoria + '/paso_' + (parseInt(index) + 1) + '.png';
+        
+        imagenInput.value = nombreImagen;
+        imagenActualDiv.innerHTML = `
+            <div class="paso-con-imagen">
+                <div class="paso-sin-imagen">
+                    <i class="fas fa-check text-success"></i>
+                    <small class="d-block mt-1">${nombreImagen}</small>
+                </div>
+                <small class="d-block mt-1 text-muted">${nombreImagen.split('/').pop()}</small>
+            </div>
+        `;
+    }
+}
+
+function eliminarPaso(index) {
+    const pasoItem = document.querySelector('.paso-item[data-paso-index="' + index + '"]');
+    if (pasoItem) {
+        const totalPasos = document.querySelectorAll('.paso-item').length;
+        if (totalPasos <= 1) {
+            alert('Debe haber al menos un paso en la solución.');
+            return;
+        }
+        
+        if (!confirm('¿Está seguro de eliminar este paso?')) {
+            return;
+        }
+        
+        pasoItem.remove();
+        actualizarIndicesPasos();
+    }
+}
+
+function actualizarIndicesPasos() {
+    const pasoItems = document.querySelectorAll('.paso-item');
+    pasoItems.forEach((item, newIndex) => {
+        const indexStr = newIndex.toString();
+        item.setAttribute('data-paso-index', indexStr);
+        
+        const pasoNumber = item.querySelector('.paso-number');
+        const pasoTitle = item.querySelector('h5');
+        
+        if (pasoNumber) pasoNumber.textContent = (newIndex + 1).toString();
+        if (pasoTitle) pasoTitle.textContent = 'Paso ' + (newIndex + 1).toString();
+        
+        // Actualizar nombres de los inputs
+        const inputs = item.querySelectorAll('input, textarea');
+        inputs.forEach(input => {
+            const name = input.getAttribute('name');
+            if (name) {
+                const newName = name.replace(/\d+/, indexStr);
+                input.setAttribute('name', newName);
+            }
+        });
+        
+        // Actualizar botones con data attributes
+        const btnUpload = item.querySelector('.btn-upload');
+        const btnDelete = item.querySelector('.btn-delete');
+        
+        if (btnUpload) {
+            btnUpload.setAttribute('data-paso-index', indexStr);
+        }
+        
+        if (btnDelete) {
+            // Habilitar/deshabilitar botón de eliminar según cantidad de pasos
+            if (pasoItems.length <= 1) {
+                btnDelete.disabled = true;
+            } else {
+                btnDelete.disabled = false;
+                btnDelete.setAttribute('data-paso-index', indexStr);
+            }
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Inicializar pasoCount basado en los pasos existentes
+    let pasoCount = document.querySelectorAll('.paso-item').length;
+    const pasosContainer = document.getElementById('pasosContainer');
+    const btnAgregarPaso = document.getElementById('btnAgregarPaso');
+
+    // Agregar event listeners a los botones existentes
+    function inicializarEventListeners() {
+        // Event listeners para botones de subir imagen
+        document.querySelectorAll('.btn-upload').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const index = this.getAttribute('data-paso-index');
+                mostrarModalImagen(index);
+            });
+        });
+        
+        // Event listeners para botones de eliminar
+        document.querySelectorAll('.btn-delete').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const index = this.getAttribute('data-paso-index');
+                eliminarPaso(index);
+            });
+        });
+    }
+
+    function agregarPaso() {
+        const pasoIndex = pasoCount;
+        const pasoIndexStr = pasoIndex.toString();
+        const pasoHTML = `
+            <div class="paso-item" data-paso-index="${pasoIndexStr}">
+                <div class="paso-header">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="paso-number">${pasoIndex + 1}</div>
+                        <h5 class="mb-0">Paso ${pasoIndex + 1}</h5>
+                    </div>
+                    <div class="paso-actions">
+                        <button type="button" class="btn btn-action btn-upload" data-paso-index="${pasoIndexStr}">
+                            <i class="fas fa-image"></i>
+                        </button>
+                        <button type="button" class="btn btn-action btn-delete" data-paso-index="${pasoIndexStr}">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label class="form-label">Título del Paso *</label>
+                            <input type="text" class="form-control" name="paso_titulo_${pasoIndexStr}" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label class="form-label">Imagen</label>
+                            <div class="imagen-actual mb-2">
+                                <div class="paso-sin-imagen">
+                                    <i class="fas fa-camera"></i>
+                                    <small class="d-block mt-1">Sin imagen</small>
+                                </div>
+                            </div>
+                            <input type="hidden" name="paso_imagen_${pasoIndexStr}" value="">
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Descripción *</label>
+                    <textarea class="form-control" name="paso_descripcion_${pasoIndexStr}" rows="2" required></textarea>
+                </div>
+            </div>
+        `;
+        pasosContainer.insertAdjacentHTML('beforeend', pasoHTML);
+        pasoCount++;
+        
+        // Inicializar event listeners para el nuevo paso
+        const nuevoPaso = pasosContainer.lastElementChild;
+        const btnUpload = nuevoPaso.querySelector('.btn-upload');
+        const btnDelete = nuevoPaso.querySelector('.btn-delete');
+        
+        if (btnUpload) {
+            btnUpload.addEventListener('click', function() {
+                const index = this.getAttribute('data-paso-index');
+                mostrarModalImagen(index);
+            });
+        }
+        
+        if (btnDelete) {
+            btnDelete.addEventListener('click', function() {
+                const index = this.getAttribute('data-paso-index');
+                eliminarPaso(index);
+            });
+        }
+        
+        // Actualizar estados de botones de eliminar
+        actualizarIndicesPasos();
+    }
+
+    btnAgregarPaso.addEventListener('click', agregarPaso);
+    
+    // Inicializar event listeners y estados
+    inicializarEventListeners();
+    actualizarIndicesPasos();
+});
+</script>
+{% endblock %}
