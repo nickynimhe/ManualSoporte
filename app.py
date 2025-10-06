@@ -920,28 +920,49 @@ def agregar_ficha():
     
     if request.method == 'POST':
         # Obtener datos del formulario
-        categoria = request.form['categoria']
-        problema = request.form['problema']
-        descripcion = request.form['descripcion']
-        causas = request.form['causas']
-        solucion = request.form['solucion']
-        palabras_clave = request.form['palabras_clave']
+        categoria = request.form.get('categoria', '')
+        problema = request.form.get('problema', '')
+        descripcion = request.form.get('descripcion', '')
+        causas = request.form.get('causas', '')
+        solucion = request.form.get('solucion', '')
+        palabras_clave = request.form.get('palabras_clave', '')
         
-        print(f"📝 Intentando agregar ficha: {categoria}, {problema}")
+        print(f"📝 DATOS DEL FORMULARIO:")
+        print(f"   Categoría: {categoria}")
+        print(f"   Problema: {problema}")
+        print(f"   Descripción: {descripcion}")
+        print(f"   Causas: {causas}")
+        print(f"   Solución: {solucion}")
+        print(f"   Palabras clave: {palabras_clave}")
         
         # Validar campos requeridos
-        if not all([categoria, problema, causas, solucion]):
+        campos_requeridos = {
+            'categoria': categoria,
+            'problema': problema, 
+            'causas': causas,
+            'solucion': solucion
+        }
+        
+        campos_faltantes = [campo for campo, valor in campos_requeridos.items() if not valor]
+        
+        if campos_faltantes:
+            print(f"❌ CAMPOS FALTANTES: {campos_faltantes}")
             flash('Por favor, complete todos los campos requeridos', 'error')
             return render_template('agregar_ficha.html')
+        
+        print("✅ TODOS LOS CAMPOS REQUERIDOS COMPLETOS")
         
         try:
             conexion = crear_conexion()
             if conexion:
                 cursor = conexion.cursor()
+                print("🔧 Ejecutando INSERT en la base de datos...")
+                
                 cursor.execute('''
                     INSERT INTO fichas (categoria, problema, descripcion, causas, solucion, palabras_clave)
                     VALUES (%s, %s, %s, %s, %s, %s)
                 ''', (categoria, problema, descripcion, causas, solucion, palabras_clave))
+                
                 conexion.commit()
                 print("✅ Ficha agregada correctamente a la base de datos")
                 flash('Ficha agregada correctamente', 'success')
@@ -951,8 +972,8 @@ def agregar_ficha():
                 flash('Error de conexión a la base de datos', 'error')
                 
         except Exception as e:
-            print(f"❌ Error al agregar la ficha: {str(e)}")
-            flash('Error al agregar la ficha', 'error')
+            print(f"❌ ERROR en base de datos: {str(e)}")
+            flash(f'Error al agregar la ficha: {str(e)}', 'error')
             if conexion:
                 conexion.rollback()
         finally:
