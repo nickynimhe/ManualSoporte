@@ -251,4 +251,4 @@ if __name__ == "__main__":
     if crear_tablas():
         print("🎉 ¡Base de datos lista!")
     else:
-        print("💥 Error inicializando base de datos")}
+        print("💥 Error inicializando base de datos")
