@@ -108,8 +108,8 @@ def crear_tablas():
                 titulo VARCHAR(255) NOT NULL,
                 categoria VARCHAR(50) NOT NULL,
                 descripcion TEXT,
-                pasos JSONB NOT NULL DEFAULT '[]',
-                imagen JSONB NOT NULL DEFAULT '[]',
+                pasos JSONB,
+                imagen JSONB,
                 estado VARCHAR(20) DEFAULT 'activo',
                 fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
