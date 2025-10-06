@@ -41,7 +41,7 @@
         <div class="col-12">
             <div class="corporate-card">
                 <div class="card-content">
-                    <form method="POST" id="solucionForm">
+                    <form method="POST" id="solucionForm" enctype="multipart/form-data">
                         <!-- Información básica -->
                         <div class="row mb-4">
                             <div class="col-md-6">
@@ -65,6 +65,21 @@
                         <div class="form-group mb-4">
                             <label for="descripcion" class="form-label">Descripción *</label>
                             <textarea class="form-control" id="descripcion" name="descripcion" rows="3" required></textarea>
+                        </div>
+
+                        <!-- Imagen principal -->
+                        <div class="form-group mb-4">
+                            <label for="imagen_principal" class="form-label">Imagen Principal</label>
+                            <div class="image-upload-container">
+                                <div class="image-preview mb-3" id="imagenPrincipalPreview">
+                                    <div class="image-preview-placeholder">
+                                        <i class="fas fa-image"></i>
+                                        <span>Vista previa de imagen principal</span>
+                                    </div>
+                                </div>
+                                <input type="file" class="form-control" id="imagen_principal" name="imagen_principal" accept="image/*">
+                                <small class="form-text text-muted">Formatos soportados: JPG, PNG, GIF. Tamaño máximo: 2MB</small>
+                            </div>
                         </div>
 
                         <!-- Sección de pasos -->
@@ -96,13 +111,104 @@
     </div>
 </div>
 
+<!-- Modal para subir imágenes -->
+<div class="modal fade" id="imagenModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content corporate-modal">
+            <div class="modal-header corporate-modal-header">
+                <h5 class="modal-title">Seleccionar Imagen</h5>
+                <button type="button" class="btn-close btn-close-corporate" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="image-selection-options">
+                    <div class="option-card" data-type="upload">
+                        <div class="option-icon">
+                            <i class="fas fa-upload"></i>
+                        </div>
+                        <div class="option-content">
+                            <h6>Subir Nueva Imagen</h6>
+                            <p>Sube una imagen desde tu dispositivo</p>
+                        </div>
+                    </div>
+                    <div class="option-card" data-type="gallery">
+                        <div class="option-icon">
+                            <i class="fas fa-images"></i>
+                        </div>
+                        <div class="option-content">
+                            <h6>Galería de Imágenes</h6>
+                            <p>Selecciona una imagen existente</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Sección de subida de imagen -->
+                <div id="uploadSection" class="d-none">
+                    <div class="upload-area" id="uploadArea">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <p>Arrastra una imagen aquí o haz clic para seleccionar</p>
+                        <input type="file" id="fileInput" accept="image/*" class="d-none">
+                    </div>
+                    <div class="image-preview mt-3" id="uploadPreview"></div>
+                </div>
+                
+                <!-- Sección de galería -->
+                <div id="gallerySection" class="d-none">
+                    <div class="gallery-grid">
+                        <!-- Las imágenes de la galería se cargarían dinámicamente -->
+                        <div class="gallery-item">
+                            <img src="/static/img/soluciones/placeholder.jpg" alt="Imagen de ejemplo">
+                            <div class="gallery-overlay">
+                                <button class="btn btn-sm corporate-btn select-image">Seleccionar</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn corporate-btn" id="confirmImage">Seleccionar Imagen</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <style>
+/* Estilos para el formulario */
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-label {
+    font-weight: 600;
+    color: var(--corporate-blue);
+    margin-bottom: 0.5rem;
+}
+
+.form-control {
+    border: 2px solid var(--corporate-blue-light);
+    border-radius: var(--corporate-radius);
+    padding: 0.75rem 1rem;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus {
+    border-color: var(--corporate-blue);
+    box-shadow: 0 0 0 0.2rem rgba(5, 35, 152, 0.25);
+}
+
+/* Estilos para pasos */
 .paso-item {
     background: var(--corporate-gray-light);
     border-radius: var(--corporate-radius);
     padding: 1.5rem;
     margin-bottom: 1rem;
     border-left: 4px solid var(--corporate-blue);
+    transition: all 0.3s ease;
+}
+
+.paso-item:hover {
+    border-left-color: var(--corporate-blue-dark);
+    box-shadow: var(--corporate-shadow);
 }
 
 .paso-header {
@@ -131,33 +237,175 @@
 }
 
 .paso-sin-imagen {
-    width: 100px;
-    height: 80px;
-    background: var(--corporate-gray-light);
+    width: 120px;
+    height: 90px;
+    background: var(--corporate-white);
     border: 2px dashed var(--corporate-gray);
     border-radius: 8px;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     color: var(--corporate-gray);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.paso-sin-imagen:hover {
+    border-color: var(--corporate-blue);
+    color: var(--corporate-blue);
 }
 
 .btn-upload {
     background: var(--corporate-gray-light);
     color: var(--corporate-gray);
+    border: none;
+    border-radius: 6px;
+    padding: 0.5rem;
+    transition: all 0.3s ease;
 }
 
 .btn-upload:hover {
     background: var(--corporate-blue);
     color: var(--corporate-white);
 }
+
+/* Estilos para imágenes */
+.image-upload-container {
+    margin-top: 0.5rem;
+}
+
+.image-preview {
+    border: 2px dashed var(--corporate-blue-light);
+    border-radius: var(--corporate-radius);
+    padding: 1rem;
+    text-align: center;
+}
+
+.image-preview-placeholder {
+    color: var(--corporate-gray);
+    padding: 2rem;
+}
+
+.image-preview-placeholder i {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.image-preview img {
+    max-width: 100%;
+    max-height: 200px;
+    border-radius: var(--corporate-radius);
+}
+
+/* Estilos para el modal de imágenes */
+.image-selection-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.option-card {
+    border: 2px solid var(--corporate-blue-light);
+    border-radius: var(--corporate-radius);
+    padding: 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.option-card:hover {
+    border-color: var(--corporate-blue);
+    transform: translateY(-2px);
+}
+
+.option-icon {
+    font-size: 2rem;
+    color: var(--corporate-blue);
+    margin-bottom: 1rem;
+}
+
+.upload-area {
+    border: 2px dashed var(--corporate-blue);
+    border-radius: var(--corporate-radius);
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.upload-area:hover {
+    background: var(--corporate-blue-light);
+}
+
+.upload-area i {
+    font-size: 3rem;
+    color: var(--corporate-blue);
+    margin-bottom: 1rem;
+}
+
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 1rem;
+}
+
+.gallery-item {
+    position: relative;
+    border-radius: var(--corporate-radius);
+    overflow: hidden;
+    aspect-ratio: 1;
+}
+
+.gallery-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.gallery-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(5, 35, 152, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.gallery-item:hover .gallery-overlay {
+    opacity: 1;
+}
 </style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     let pasoCount = 0;
+    let currentPasoIndex = null;
     const pasosContainer = document.getElementById('pasosContainer');
     const btnAgregarPaso = document.getElementById('btnAgregarPaso');
+    const imagenModal = new bootstrap.Modal(document.getElementById('imagenModal'));
+    
+    // Vista previa de imagen principal
+    const imagenPrincipalInput = document.getElementById('imagen_principal');
+    const imagenPrincipalPreview = document.getElementById('imagenPrincipalPreview');
+    
+    imagenPrincipalInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                imagenPrincipalPreview.innerHTML = `<img src="${e.target.result}" alt="Vista previa">`;
+            };
+            reader.readAsDataURL(file);
+        }
+    });
 
     function agregarPaso() {
         const pasoIndex = pasoCount;
@@ -170,7 +418,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                     <div class="paso-actions">
                         <button type="button" class="btn btn-action btn-upload" onclick="mostrarModalImagen(${pasoIndex})">
-                            <i class="fas fa-image"></i>
+                            <i class="fas fa-image me-1"></i>Imagen
                         </button>
                         <button type="button" class="btn btn-action btn-delete" onclick="eliminarPaso(${pasoIndex})">
                             <i class="fas fa-times"></i>
@@ -178,18 +426,19 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 </div>
                 <div class="row">
-                    <div class="col-md-6">
+                    <div class="col-md-8">
                         <div class="form-group">
                             <label class="form-label">Título del Paso *</label>
                             <input type="text" class="form-control" name="paso_titulo_${pasoIndex}" required>
                         </div>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <div class="form-group">
                             <label class="form-label">Imagen</label>
                             <div class="imagen-actual mb-2">
-                                <div class="paso-sin-imagen">
+                                <div class="paso-sin-imagen" onclick="mostrarModalImagen(${pasoIndex})">
                                     <i class="fas fa-camera"></i>
+                                    <small>Agregar imagen</small>
                                 </div>
                             </div>
                             <input type="hidden" name="paso_imagen_${pasoIndex}" value="">
@@ -198,7 +447,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
                 <div class="form-group">
                     <label class="form-label">Descripción *</label>
-                    <textarea class="form-control" name="paso_descripcion_${pasoIndex}" rows="2" required></textarea>
+                    <textarea class="form-control" name="paso_descripcion_${pasoIndex}" rows="3" required></textarea>
                 </div>
             </div>
         `;
@@ -211,21 +460,113 @@ document.addEventListener('DOMContentLoaded', function() {
 
     btnAgregarPaso.addEventListener('click', agregarPaso);
 
-    // Funciones globales
+    // Funciones globales para manejo de imágenes
     window.mostrarModalImagen = function(index) {
-        alert('Funcionalidad de subir imagen para el paso ' + (index + 1) + '. En una implementación real, aquí se abriría un modal para subir la imagen.');
-        // Simular subida de imagen
-        const imagenInput = document.querySelector(`input[name="paso_imagen_${index}"]`);
-        const imagenActualDiv = document.querySelector(`.paso-item[data-paso-index="${index}"] .imagen-actual`);
+        currentPasoIndex = index;
+        imagenModal.show();
         
-        imagenInput.value = `soluciones/ejemplo_${index + 1}.png`;
-        imagenActualDiv.innerHTML = `
-            <div class="paso-sin-imagen">
-                <i class="fas fa-check text-success"></i>
-                <small class="d-block mt-1">imagen_${index + 1}.png</small>
-            </div>
-        `;
+        // Configurar opciones del modal
+        setupImageModal();
     };
+
+    function setupImageModal() {
+        const optionCards = document.querySelectorAll('.option-card');
+        const uploadSection = document.getElementById('uploadSection');
+        const gallerySection = document.getElementById('gallerySection');
+        
+        optionCards.forEach(card => {
+            card.addEventListener('click', function() {
+                const type = this.getAttribute('data-type');
+                
+                // Reset sections
+                uploadSection.classList.add('d-none');
+                gallerySection.classList.add('d-none');
+                
+                // Show selected section
+                if (type === 'upload') {
+                    uploadSection.classList.remove('d-none');
+                    setupUploadSection();
+                } else if (type === 'gallery') {
+                    gallerySection.classList.remove('d-none');
+                    setupGallerySection();
+                }
+            });
+        });
+    }
+
+    function setupUploadSection() {
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const uploadPreview = document.getElementById('uploadPreview');
+        
+        uploadArea.addEventListener('click', () => fileInput.click());
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.style.background = 'var(--corporate-blue-light)';
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.style.background = '';
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.style.background = '';
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFileSelection(files[0]);
+            }
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileSelection(e.target.files[0]);
+            }
+        });
+        
+        function handleFileSelection(file) {
+            if (file && file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    uploadPreview.innerHTML = `
+                        <div class="text-center">
+                            <img src="${e.target.result}" alt="Vista previa" style="max-height: 200px; border-radius: 8px;">
+                            <p class="mt-2">${file.name}</p>
+                        </div>
+                    `;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+    }
+
+    function setupGallerySection() {
+        // En una implementación real, aquí cargarías imágenes de la galería
+        // Por ahora es solo un placeholder
+    }
+
+    // Confirmar selección de imagen
+    document.getElementById('confirmImage').addEventListener('click', function() {
+        if (currentPasoIndex !== null) {
+            // En una implementación real, aquí procesarías la imagen seleccionada
+            // Por ahora simulamos una imagen seleccionada
+            const imagenInput = document.querySelector(`input[name="paso_imagen_${currentPasoIndex}"]`);
+            const imagenActualDiv = document.querySelector(`.paso-item[data-paso-index="${currentPasoIndex}"] .imagen-actual`);
+            
+            // Simular que se seleccionó una imagen
+            const imageName = `paso_${currentPasoIndex + 1}_${Date.now()}.jpg`;
+            imagenInput.value = imageName;
+            
+            imagenActualDiv.innerHTML = `
+                <div class="paso-sin-imagen" onclick="mostrarModalImagen(${currentPasoIndex})">
+                    <i class="fas fa-check text-success"></i>
+                    <small>${imageName}</small>
+                </div>
+            `;
+            
+            imagenModal.hide();
+        }
+    });
 
     window.eliminarPaso = function(index) {
         const pasoItem = document.querySelector(`[data-paso-index="${index}"]`);
@@ -255,8 +596,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Actualizar eventos onclick
                 const btnUpload = item.querySelector('.btn-upload');
+                const imagenDiv = item.querySelector('.imagen-actual');
                 const btnDelete = item.querySelector('.btn-delete');
+                
                 if (btnUpload) btnUpload.setAttribute('onclick', `mostrarModalImagen(${newIndex})`);
+                if (imagenDiv) imagenDiv.querySelector('.paso-sin-imagen').setAttribute('onclick', `mostrarModalImagen(${newIndex})`);
                 if (btnDelete) btnDelete.setAttribute('onclick', `eliminarPaso(${newIndex})`);
             });
             
