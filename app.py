@@ -6,9 +6,20 @@ from werkzeug.security import check_password_hash, generate_password_hash
 import psycopg2
 import json
 from datetime import datetime
+import os
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.config.from_object(Config)
+
+# Configuración para subida de imágenes
+UPLOAD_FOLDER = 'static/uploads/soluciones'
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
+
+# Asegurar que el directorio de uploads existe
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # Configurar Flask-Login
 login_manager = LoginManager()
@@ -16,121 +27,26 @@ login_manager.init_app(app)
 login_manager.login_view = 'login'
 login_manager.login_message = 'Por favor inicia sesión para acceder a esta página.'
 
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def save_uploaded_file(file):
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        # Agregar timestamp para hacer único el nombre
+        name, ext = os.path.splitext(filename)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"{name}_{timestamp}{ext}"
+        
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+        return f"uploads/soluciones/{filename}"
+    return None
+
 @app.context_processor
 def inject_now():
     return {'now': datetime.now()}
-
-@app.route('/soluciones_visuales')
-@login_required
-def soluciones_visuales():
-    soluciones = [
-        {
-            'id': 1,
-            'titulo': '¿Como consultamos clientes?',
-            'categoria': 'Softv',
-            'imagenes': ['softv/softv1.png', 'softv/softv2.png', 'softv/softv3.png', 'softv/softv4.png'],
-            'descripcion': 'Busqueda del cliente paso a paso'
-        },
-        {
-            'id': 2,
-            'titulo': '¿Como vemos las facturas del usuario?',
-            'categoria': 'Softv',
-            'imagenes': ['softv/softv5.png', 'softv/softv6.png', 'softv/softv7.png', 'softv/softv8.png'],
-            'descripcion': 'Consultar historial de pagos del usuario'
-        },
-        {
-            'id': 3,
-            'titulo': '¿Como consultamos las ordenes de servicio de los usuarios?',
-            'categoria': 'Softv',
-            'imagenes': ['softv/softv9.png', 'softv/softv10.png', 'softv/softv11.png', 'softv/softv12.png'],
-            'descripcion': 'Consultar historial de ordenes de servicio del usuario'
-        },
-        {
-            'id': 4,
-            'titulo': '¿Como consultamos reportes de fallas de los usuarios?',
-            'categoria': 'Softv',
-            'imagenes': ['softv/softv13.png', 'softv/softv14.png', 'softv/softv15.png', 'softv/softv16.png'],
-            'descripcion': 'Consultar historial de reportes de falla del usuario'
-        },
-        {
-            'id': 5,
-            'titulo': '¿Como creamos un reporte de falla?',
-            'categoria': 'Softv', 
-            'imagenes': ['softv/softv15.png', 'softv/softv16.png', 'softv/softv17.png', 'softv/softv19.png', 'softv/softv21.png', 'softv/softv22.png'],
-            'descripcion': 'Crear un reporte de falla'
-        },
-        {
-            'id': 6,
-            'titulo': '¿Como creamos una orden de servicio?',
-            'categoria': 'Softv',
-            'imagenes': ['softv/softv23.png', 'softv/softv24.png', 'softv/softv26.png', 'softv/softv27.png', 'softv/softv28.png'],
-            'descripcion': 'Crear una orden de servicio'
-        },
-        {
-            'id': 7,
-            'titulo': '¿Como borramos un reporte de falla en caso necesario?',
-            'categoria': 'Softv',
-            'imagenes': ['softv/softv29.png', 'softv/softv29.png', 'softv/softv29.png'],
-            'descripcion': 'Como eliminar un reporte de falla'
-        },
-        {
-            'id': 8,
-            'titulo': '¿Como ingresamos un nuevo cliente?',
-            'categoria': 'Softv',
-            'imagenes': ['softv/softv30.png', 'softv/softv31.png', 'softv/softv32.png', 'softv/softv33.png', 'softv/softv32.png'],
-            'descripcion': 'Crear un nuevo cliente'
-        },
-        {
-            'id': 9,
-            'titulo': '¿Como buscar un usuario?',
-            'categoria': 'Vortex',
-            'imagenes': ['vortex/vortex1.png', 'vortex/vortex2.png', 'vortex/vortex3.png'],
-            'descripcion': 'Buscar a un usuario'
-        },
-        {
-            'id': 10,
-            'titulo': '¿Como validar puertos en uso y la MAC del equipo?',
-            'categoria': 'Vortex',
-            'imagenes': ['vortex/vortex4.png', 'vortex/vortex5.png'],
-            'descripcion': 'Como validar si el usuario esta haciendo uso de los puertos o el dispositivo no da MAC'
-        },
-        {
-            'id': 11,
-            'titulo': '¿Como validar si el usuario esta teniendo consumo del servicio?',
-            'categoria': 'Vortex',
-            'imagenes': ['vortex/vortex7.png'],
-            'descripcion': 'Como validar el consumo del usuario'
-        },
-        {
-            'id': 12,
-            'titulo': '¿Como cambiar la VLAN?',
-            'categoria': 'Vortex',
-            'imagenes': ['vortex/vortex8.png', 'vortex/vortex9.png'],
-            'descripcion': 'Como cambiar la VLAN acorde a la zona'
-        },
-        {
-            'id': 13,
-            'titulo': '¿Como realizar un resync config?',
-            'categoria': 'Vortex',
-            'imagenes': ['vortex/vortex10.png', 'vortex/vortex11.png'],
-            'descripcion': 'Como realizar un resync config'
-        },
-        {
-            'id': 14,
-            'titulo': '¿Como realizar un reboot?',
-            'categoria': 'Vortex',
-            'imagenes': ['vortex/vortex12.png', 'vortex/vortex13.png'],
-            'descripcion': 'Como realizar un reebot'
-        },
-        {
-            'id': 15,
-            'titulo': '¿Como identificar si el servicio de internet y TV estan activados?',
-            'categoria': 'Vortex',
-            'imagenes': ['vortex/vortex14.png'],
-            'descripcion': 'Validar si el servicio esta activo'
-        }
-    ]
-    return render_template('soluciones_visuales.html', soluciones=soluciones)
 
 # Inyectar función de permisos a todos los templates
 @app.context_processor
@@ -222,8 +138,62 @@ def permiso_requerido(permiso):
     return decorator
 
 # =============================================
-# NUEVAS RUTAS PARA GESTIÓN DE SOLUCIONES VISUALES
+# RUTAS MEJORADAS PARA GESTIÓN DE SOLUCIONES VISUALES
 # =============================================
+
+@app.route('/soluciones_visuales')
+@login_required
+def soluciones_visuales():
+    """Página principal de soluciones visuales - ahora con datos de BD"""
+    cursor = None
+    conexion = None
+    soluciones = []
+    
+    try:
+        conexion = crear_conexion()
+        if conexion:
+            cursor = conexion.cursor()
+            cursor.execute("""
+                SELECT id, titulo, categoria, descripcion, pasos, estado, fecha_creacion, fecha_actualizacion 
+                FROM soluciones_visuales 
+                WHERE estado = 'activo'
+                ORDER BY categoria, titulo
+            """)
+            soluciones_data = cursor.fetchall()
+            
+            for solucion in soluciones_data:
+                pasos = json.loads(solucion[4]) if solucion[4] else []
+                imagenes = []
+                
+                # Extraer todas las imágenes de los pasos
+                for paso in pasos:
+                    if paso.get('imagen'):
+                        imagenes.append(paso['imagen'])
+                
+                solucion_dict = {
+                    'id': solucion[0],
+                    'titulo': solucion[1],
+                    'categoria': solucion[2],
+                    'descripcion': solucion[3],
+                    'pasos': pasos,
+                    'estado': solucion[5],
+                    'fecha_creacion': solucion[6],
+                    'fecha_actualizacion': solucion[7],
+                    'imagenes': imagenes
+                }
+                soluciones.append(solucion_dict)
+                
+    except Exception as e:
+        flash('Error al cargar las soluciones visuales', 'error')
+        print(f"Error en soluciones_visuales: {e}")
+    
+    finally:
+        if cursor is not None:
+            cursor.close()
+        if conexion is not None:
+            conexion.close()
+    
+    return render_template('soluciones_visuales.html', soluciones=soluciones)
 
 @app.route('/gestion-soluciones')
 @login_required
@@ -273,11 +243,12 @@ def gestion_soluciones():
 @login_required
 @permiso_requerido('gestion_soluciones_visuales')
 def agregar_solucion():
-    """Agregar nueva solución visual"""
+    """Agregar nueva solución visual con soporte para subida de imágenes"""
     if request.method == 'POST':
         titulo = request.form.get('titulo')
         categoria = request.form.get('categoria')
         descripcion = request.form.get('descripcion')
+        estado = request.form.get('estado', 'activo')
         
         # Recopilar pasos del formulario
         pasos = []
@@ -289,12 +260,17 @@ def agregar_solucion():
                 break
                 
             paso_descripcion = request.form.get(f'paso_descripcion_{paso_count}')
-            paso_imagen = request.form.get(f'paso_imagen_{paso_count}', '')
+            paso_imagen_file = request.files.get(f'paso_imagen_{paso_count}')
+            
+            # Procesar imagen si se subió
+            imagen_path = None
+            if paso_imagen_file and paso_imagen_file.filename:
+                imagen_path = save_uploaded_file(paso_imagen_file)
             
             pasos.append({
                 'titulo': paso_titulo,
                 'descripcion': paso_descripcion,
-                'imagen': paso_imagen
+                'imagen': imagen_path
             })
             paso_count += 1
         
@@ -310,9 +286,9 @@ def agregar_solucion():
             if conexion:
                 cursor = conexion.cursor()
                 cursor.execute("""
-                    INSERT INTO soluciones_visuales (titulo, categoria, descripcion, pasos) 
-                    VALUES (%s, %s, %s, %s)
-                """, (titulo, categoria, descripcion, json.dumps(pasos)))
+                    INSERT INTO soluciones_visuales (titulo, categoria, descripcion, pasos, estado) 
+                    VALUES (%s, %s, %s, %s, %s)
+                """, (titulo, categoria, descripcion, json.dumps(pasos), estado))
                 
                 conexion.commit()
                 flash('Solución agregada correctamente', 'success')
@@ -333,7 +309,7 @@ def agregar_solucion():
 @login_required
 @permiso_requerido('gestion_soluciones_visuales')
 def editar_solucion(id):
-    """Editar solución visual existente"""
+    """Editar solución visual existente con soporte para imágenes"""
     cursor = None
     conexion = None
     solucion = None
@@ -347,6 +323,7 @@ def editar_solucion(id):
                 titulo = request.form.get('titulo')
                 categoria = request.form.get('categoria')
                 descripcion = request.form.get('descripcion')
+                estado = request.form.get('estado', 'activo')
                 
                 # Recopilar pasos del formulario
                 pasos = []
@@ -358,12 +335,18 @@ def editar_solucion(id):
                         break
                         
                     paso_descripcion = request.form.get(f'paso_descripcion_{paso_count}')
-                    paso_imagen = request.form.get(f'paso_imagen_{paso_count}', '')
+                    paso_imagen_file = request.files.get(f'paso_imagen_{paso_count}')
+                    paso_imagen_existente = request.form.get(f'paso_imagen_existente_{paso_count}')
+                    
+                    # Procesar imagen: mantener existente o subir nueva
+                    imagen_path = paso_imagen_existente
+                    if paso_imagen_file and paso_imagen_file.filename:
+                        imagen_path = save_uploaded_file(paso_imagen_file)
                     
                     pasos.append({
                         'titulo': paso_titulo,
                         'descripcion': paso_descripcion,
-                        'imagen': paso_imagen
+                        'imagen': imagen_path
                     })
                     paso_count += 1
                 
@@ -373,9 +356,9 @@ def editar_solucion(id):
                 
                 cursor.execute("""
                     UPDATE soluciones_visuales 
-                    SET titulo=%s, categoria=%s, descripcion=%s, pasos=%s, fecha_actualizacion=CURRENT_TIMESTAMP
+                    SET titulo=%s, categoria=%s, descripcion=%s, pasos=%s, estado=%s, fecha_actualizacion=CURRENT_TIMESTAMP
                     WHERE id=%s
-                """, (titulo, categoria, descripcion, json.dumps(pasos), id))
+                """, (titulo, categoria, descripcion, json.dumps(pasos), estado, id))
                 
                 conexion.commit()
                 flash('Solución actualizada correctamente', 'success')
@@ -438,6 +421,38 @@ def eliminar_solucion(id):
     
     return redirect(url_for('gestion_soluciones'))
 
+@app.route('/cambiar-estado-solucion/<int:id>/<estado>')
+@login_required
+@permiso_requerido('gestion_soluciones_visuales')
+def cambiar_estado_solucion(id, estado):
+    """Cambiar estado de solución visual (activo/inactivo)"""
+    cursor = None
+    conexion = None
+    
+    try:
+        conexion = crear_conexion()
+        if conexion:
+            cursor = conexion.cursor()
+            cursor.execute("""
+                UPDATE soluciones_visuales 
+                SET estado=%s, fecha_actualizacion=CURRENT_TIMESTAMP
+                WHERE id=%s
+            """, (estado, id))
+            conexion.commit()
+            
+            estado_msg = "activada" if estado == "activo" else "desactivada"
+            flash(f'Solución {estado_msg} correctamente', 'success')
+    except Exception as e:
+        flash('Error al cambiar el estado de la solución', 'error')
+        print(f"Error en cambiar_estado_solucion: {e}")
+    finally:
+        if cursor is not None:
+            cursor.close()
+        if conexion is not None:
+            conexion.close()
+    
+    return redirect(url_for('gestion_soluciones'))
+
 @app.route('/api/soluciones-visuales')
 @login_required
 def api_soluciones_visuales():
@@ -454,7 +469,7 @@ def api_soluciones_visuales():
                 SELECT id, titulo, categoria, descripcion, pasos 
                 FROM soluciones_visuales 
                 WHERE estado = 'activo'
-                ORDER BY titulo
+                ORDER BY categoria, titulo
             """)
             soluciones_data = cursor.fetchall()
             
@@ -467,6 +482,7 @@ def api_soluciones_visuales():
                     'titulo': solucion[1],
                     'categoria': solucion[2],
                     'descripcion': solucion[3],
+                    'pasos': pasos,
                     'imagenes': imagenes
                 })
                 
@@ -481,22 +497,20 @@ def api_soluciones_visuales():
     return jsonify(soluciones)
 
 # =============================================
-# RUTAS EXISTENTES
+# RUTAS EXISTENTES (OPTIMIZADAS)
 # =============================================
 
-# Rutas de autenticación
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    # Si el usuario ya está autenticado, redirigir al index
     if current_user.is_authenticated:
         return redirect(url_for('index'))
-    
-    cursor = None
-    conexion = None
     
     if request.method == 'POST':
         usuario = request.form['usuario']
         password = request.form['password']
+        
+        cursor = None
+        conexion = None
         
         try:
             conexion = crear_conexion()
@@ -505,8 +519,7 @@ def login():
                 cursor.execute("SELECT * FROM usuarios WHERE usuario = %s", (usuario,))
                 user_data = cursor.fetchone()
                 
-                if user_data and user_data[2] and user_data[2].strip():  # user_data[2] es password
-                    # Convertir tupla a diccionario
+                if user_data and user_data[2]:
                     user_dict = {
                         'id': user_data[0],
                         'usuario': user_data[1],
@@ -516,7 +529,6 @@ def login():
                     }
                     
                     if check_password_hash(user_dict['password'], password):
-                        # Cargar permisos desde JSON
                         permisos = {}
                         if user_dict.get('permisos'):
                             try:
@@ -527,14 +539,15 @@ def login():
                         user = User(user_dict['id'], user_dict['usuario'], user_dict['rol'], permisos)
                         login_user(user)
                         flash('¡Inicio de sesión exitoso!', 'success')
-                        return redirect(url_for('index'))
+                        
+                        # Redirigir a la página que intentaba acceder o al index
+                        next_page = request.args.get('next')
+                        return redirect(next_page or url_for('index'))
                     else:
                         flash('Usuario o contraseña incorrectos', 'error')
                 else:
                     flash('Usuario no encontrado', 'error')
-            else:
-                flash('Error de conexión a la base de datos', 'error')
-                
+                    
         except Exception as e:
             flash('Error de base de datos', 'error')
             print(f"Error en login: {e}")
@@ -546,16 +559,55 @@ def login():
     
     return render_template('login.html')
 
-@app.route('/soluciones_visuales')
+@app.route('/logout')
 @login_required
-def soluciones_visuales():
-    # Esta ruta ahora puede usar los datos de la base de datos
-    return render_template('soluciones_visuales.html')
+def logout():
+    logout_user()
+    flash('Sesión cerrada correctamente', 'info')
+    return redirect(url_for('login'))
 
-@app.route('/atencion_telefonica')
+@app.route('/')
 @login_required
-def atencion_telefonica():
-    return render_template('atencion_telefonica.html')
+def index():
+    if not current_user.puede('ver_fichas'):
+        flash('No tienes permisos para ver las fichas', 'error')
+        return redirect(url_for('login'))
+    
+    cursor = None
+    conexion = None
+    fichas = []
+    
+    try:
+        conexion = crear_conexion()
+        if conexion:
+            cursor = conexion.cursor()
+            cursor.execute("SELECT * FROM fichas ORDER BY fecha_actualizacion DESC LIMIT 10")
+            fichas_data = cursor.fetchall()
+            
+            for ficha in fichas_data:
+                ficha_dict = {
+                    'id': ficha[0],
+                    'categoria': ficha[1],
+                    'problema': ficha[2],
+                    'descripcion': ficha[3],
+                    'causas': ficha[4],
+                    'solucion': ficha[5],
+                    'palabras_clave': ficha[6],
+                    'fecha_creacion': ficha[7],
+                    'fecha_actualizacion': ficha[8]
+                }
+                fichas.append(ficha_dict)
+                
+    except Exception as e:
+        flash('Error al cargar las fichas', 'error')
+        print(f"Error en index: {e}")
+    finally:
+        if cursor is not None:
+            cursor.close()
+        if conexion is not None:
+            conexion.close()
+    
+    return render_template('index.html', fichas=fichas, user=current_user)
 
 @app.route('/informacion-general')
 @login_required
