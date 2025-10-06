@@ -12,7 +12,7 @@ def crear_conexion():
         try:
             print(f"🔗 Intento {intento + 1} de conexión a PostgreSQL...")
             
-            # Opción 1: Usar DATABASE_URL si existe
+            # Usar DATABASE_URL si existe
             database_url = os.getenv('DATABASE_URL')
             
             if database_url:
@@ -28,7 +28,7 @@ def crear_conexion():
                 conexion = psycopg2.connect(database_url)
                 
             else:
-                # Opción 2: Usar variables individuales
+                # Usar variables individuales
                 user = os.getenv('DB_USER', 'soporte_tecnico_9sad_user')
                 password = os.getenv('DB_PASSWORD', 'T56GYS30j5w4k6zrdlvAh1GfExjT0t7a')
                 host = os.getenv('DB_HOST', 'dpg-d3g1q2nqaa0ldt0j7vug-a.oregon-postgres.render.com')
@@ -72,6 +72,49 @@ def crear_conexion():
             else:
                 print("💥 Todos los intentos de conexión fallaron")
                 return None
+
+def resetear_secuencias():
+    """Función CRÍTICA: Resetea las secuencias de las tablas"""
+    conexion = None
+    cursor = None
+    
+    try:
+        conexion = crear_conexion()
+        if not conexion:
+            print("💥 No se pudo conectar para resetear secuencias")
+            return False
+
+        cursor = conexion.cursor()
+        
+        print("🔄 Reseteando secuencias...")
+        
+        # Resetear secuencia de usuarios
+        cursor.execute("""
+            SELECT setval('usuarios_id_seq', COALESCE((SELECT MAX(id) FROM usuarios), 1), false)
+        """)
+        print("✅ Secuencia 'usuarios_id_seq' reseteada")
+        
+        # Resetear secuencia de fichas
+        cursor.execute("""
+            SELECT setval('fichas_id_seq', COALESCE((SELECT MAX(id) FROM fichas), 1), false)
+        """)
+        print("✅ Secuencia 'fichas_id_seq' reseteada")
+        
+        conexion.commit()
+        print("🎉 Secuencias reseteadas correctamente")
+        return True
+
+    except Exception as err:
+        print(f"💥 Error reseteando secuencias: {str(err)}")
+        if conexion:
+            conexion.rollback()
+        return False
+        
+    finally:
+        if cursor:
+            cursor.close()
+        if conexion:
+            conexion.close()
 
 def crear_tablas():
     """Función mejorada para crear tablas"""
@@ -135,6 +178,14 @@ def crear_tablas():
             )
             print("✅ Usuario 'admin' creado (password: admin123)")
 
+        # RESETEAR SECUENCIAS DESPUÉS DE CREAR TABLAS
+        cursor.execute("""
+            SELECT setval('usuarios_id_seq', COALESCE((SELECT MAX(id) FROM usuarios), 1), true)
+        """)
+        cursor.execute("""
+            SELECT setval('fichas_id_seq', COALESCE((SELECT MAX(id) FROM fichas), 1), true)
+        """)
+
         conexion.commit()
         print("🎉 Base de datos inicializada CORRECTAMENTE")
         return True
@@ -188,7 +239,16 @@ def verificar_tablas():
 
 if __name__ == "__main__":
     print("🚀 Inicializando base de datos...")
+    
+    # Primero resetear secuencias
+    print("🔄 Reseteando secuencias...")
+    if resetear_secuencias():
+        print("✅ Secuencias reseteadas")
+    else:
+        print("⚠️ No se pudieron resetear secuencias")
+    
+    # Luego crear tablas si es necesario
     if crear_tablas():
         print("🎉 ¡Base de datos lista!")
     else:
-        print("💥 Error inicializando base de datos")
+        print("💥 Error inicializando base de datos")}
