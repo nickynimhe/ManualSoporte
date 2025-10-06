@@ -1,180 +1,207 @@
 {% extends "base.html" %}
 
-{% block title %}Gestión de Usuarios - Soporte Técnico{% endblock %}
+{% block title %}Gestión de Soluciones Visuales{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h1 class="d-flex align-items-center gap-2 fs-4 fw-bold">
-        <i class="fas fa-users" style="color:#6f42c1; font-size: 1.3rem;"></i> Gestión de Usuarios
-    </h1>
-    <a href="{{ url_for('agregar_usuario') }}" class="btn btn-primary btn-sm d-flex align-items-center gap-2 shadow-sm">
-        <i class="fas fa-user-plus"></i> Agregar Usuario
-    </a>
-</div>
-
-<div class="card shadow-sm rounded-4 border-0">
-    <div class="card-header bg-light rounded-top-4">
-        <h5 class="mb-0 fw-bold text-secondary">Lista de Usuarios</h5>
-    </div>
-    <div class="card-body p-0">
-        {% if usuarios %}
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-primary text-primary">
-                    <tr>
-                        <th scope="col" class="text-center">ID</th>
-                        <th scope="col" class="fw-semibold">Usuario</th>
-                        <th scope="col" class="fw-semibold">Rol</th>
-                        <th scope="col" class="fw-semibold">Fecha Creación</th>
-                        <th scope="col" class="fw-semibold">Última Actualización</th>
-                        <th scope="col" class="text-center fw-semibold">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for usuario in usuarios %}
-                    <tr class="align-middle">
-                        <td class="text-center">{{ usuario.id }}</td>
-                        <td>
-                            {{ usuario.usuario }}
-                            {% if usuario.id == current_user.id %}
-                            <span class="badge bg-info text-white ms-2" style="font-weight: 600; font-size: 0.75rem; border-radius: 0.4rem;" title="Este es tu usuario">Tú</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <span class="badge 
-                                {% if usuario.rol == 'admin' %}bg-danger
-                                {% elif usuario.rol == 'asesor' %}bg-secondary
-                                {% else %}bg-secondary
-                                {% endif %} text-uppercase px-3 py-1 fs-7 fw-semibold" 
-                                style="border-radius: 1rem;">
-                                {{ usuario.rol }}
-                            </span>
-                        </td>
-                        <td class="text-nowrap">{{ usuario.fecha_creacion.strftime('%d/%m/%Y %H:%M') }}</td>
-                        <td class="text-nowrap">{{ usuario.fecha_actualizacion.strftime('%d/%m/%Y %H:%M') }}</td>
-                        <td class="text-center">
-                            {% if usuario.id != current_user.id %}
-                            <div class="btn-group" role="group" aria-label="Acciones usuario {{ usuario.usuario }}">
-                                <a href="{{ url_for('editar_usuario', id=usuario.id) }}" 
-                                   class="btn btn-outline-warning btn-sm rounded-circle shadow-sm" 
-                                   data-bs-toggle="tooltip" data-bs-placement="top" title="Editar usuario">
-                                    <i class="fas fa-edit"></i>
-                                </a>
-                                
-                                <!-- Botón que abre el modal -->
-                                <button type="button"
-                                        class="btn btn-outline-danger btn-sm rounded-circle shadow-sm"
-                                        data-bs-toggle="modal" data-bs-target="#confirmDeleteModal{{ usuario.id }}"
-                                        data-bs-placement="top" title="Eliminar usuario">
-                                    <i class="fas fa-trash-alt"></i>
-                                </button>
-                            </div>
-                            {% else %}
-                            <span class="text-muted fst-italic" title="No puedes editar ni eliminar tu propio usuario">No disponible</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% else %}
-        <div class="text-center py-5">
-            <h4 class="mb-3 text-secondary">No hay usuarios registrados</h4>
-            <p class="text-muted fs-6">Comienza agregando el primer usuario</p>
-            <a href="{{ url_for('agregar_usuario') }}" class="btn btn-primary btn-lg d-inline-flex align-items-center gap-2 shadow-sm">
-                <i class="fas fa-user-plus"></i> Agregar Usuario
-            </a>
-        </div>
-        {% endif %}
-    </div>
-</div>
-
-<!-- MOVER LOS MODALES FUERA DE LA TABLA - SOLUCIÓN DEL PROBLEMA -->
-{% for usuario in usuarios %}
-    {% if usuario.id != current_user.id %}
-    <!-- Modal de confirmación - FUERA de la tabla -->
-    <div class="modal fade" id="confirmDeleteModal{{ usuario.id }}" tabindex="-1" aria-labelledby="confirmDeleteLabel{{ usuario.id }}" aria-hidden="true" data-bs-backdrop="static">
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-          <div class="modal-header bg-danger text-white">
-            <h5 class="modal-title" id="confirmDeleteLabel{{ usuario.id }}">
-              <i class="fas fa-exclamation-triangle me-2"></i>Confirmar Eliminación
-            </h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-          </div>
-          <div class="modal-body text-center py-4">
-            <i class="fas fa-user-slash text-danger mb-3" style="font-size: 3rem;"></i>
-            <h6 class="fw-bold mb-3">¿Estás seguro que deseas eliminar al usuario?</h6>
-            <div class="alert alert-warning">
-              <strong>{{ usuario.usuario }}</strong> - {{ usuario.rol|upper }}
+<div class="container-fluid py-4">
+    <!-- Header Corporativo -->
+    <div class="corporate-header mb-5">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <div class="d-flex align-items-center">
+                    <div class="header-icon-wrapper me-4">
+                        <div class="corporate-icon">
+                            <i class="fas fa-tasks"></i>
+                        </div>
+                    </div>
+                    <div class="flex-grow-1">
+                        <h1 class="corporate-title mb-2">
+                            Gestión de Soluciones Visuales
+                        </h1>
+                        <p class="corporate-subtitle mb-0">
+                            <i class="fas fa-cogs me-2"></i>
+                            Administra las soluciones paso a paso para Vortex y Softv
+                        </p>
+                    </div>
+                </div>
             </div>
-            <p class="text-muted small">
-              <i class="fas fa-info-circle me-1"></i>
-              Esta acción no se puede deshacer
-            </p>
-          </div>
-          <div class="modal-footer justify-content-center">
-            <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">
-              <i class="fas fa-times me-1"></i>Cancelar
-            </button>
-            <a href="{{ url_for('eliminar_usuario', id=usuario.id) }}" class="btn btn-danger px-4">
-              <i class="fas fa-trash-alt me-1"></i>Eliminar
-            </a>
-          </div>
+            <div class="col-md-4">
+                <div class="corporate-stats">
+                    <div class="stat-item vortex-stat">
+                        <div class="stat-number">{{ soluciones|length }}</div>
+                        <div class="stat-label">Total Soluciones</div>
+                    </div>
+                    <div class="stat-item softv-stat">
+                        <div class="stat-number">{{ soluciones|selectattr('estado', 'equalto', 'activo')|list|length }}</div>
+                        <div class="stat-label">Activas</div>
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
     </div>
-    {% endif %}
-{% endfor %}
 
-<div class="mt-4">
-    <a href="{{ url_for('index') }}" class="btn btn-secondary d-inline-flex align-items-center gap-2 shadow-sm">
-        <i class="fas fa-arrow-left"></i> Volver al Inicio
-    </a>
+    <!-- Botón para agregar nueva solución -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h3 class="section-title">Soluciones Existentes</h3>
+                <a href="{{ url_for('agregar_solucion') }}" class="btn corporate-btn">
+                    <i class="fas fa-plus me-2"></i>Nueva Solución
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla de soluciones -->
+    <div class="row">
+        <div class="col-12">
+            <div class="corporate-card">
+                <div class="card-content">
+                    <div class="table-responsive">
+                        <table class="table table-hover corporate-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Título</th>
+                                    <th>Categoría</th>
+                                    <th>Pasos</th>
+                                    <th>Fecha Creación</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for solucion in soluciones %}
+                                <tr>
+                                    <td>{{ solucion.id }}</td>
+                                    <td>
+                                        <strong>{{ solucion.titulo }}</strong>
+                                        <br><small class="text-muted">{{ solucion.descripcion[:60] }}...</small>
+                                    </td>
+                                    <td>
+                                        <span class="service-tag {% if solucion.categoria == 'Vortex' %}vortex-tag{% else %}softv-tag{% endif %}">
+                                            {{ solucion.categoria }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ solucion.pasos|length }} pasos</span>
+                                    </td>
+                                    <td>{{ solucion.fecha_creacion.strftime('%d/%m/%Y') }}</td>
+                                    <td>
+                                        <span class="badge-estado {% if solucion.estado == 'activo' %}badge-activo{% else %}badge-inactivo{% endif %}">
+                                            {{ solucion.estado }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex gap-1">
+                                            <a href="{{ url_for('editar_solucion', id=solucion.id) }}" class="btn btn-action btn-edit">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a href="{{ url_for('eliminar_solucion', id=solucion.id) }}" class="btn btn-action btn-delete" onclick="return confirm('¿Está seguro de eliminar esta solución?')">
+                                                <i class="fas fa-trash"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="7" class="text-center py-4">
+                                        <div class="empty-state-corporate">
+                                            <div class="empty-icon-corporate mb-3">
+                                                <i class="fas fa-file-alt"></i>
+                                            </div>
+                                            <h5 class="empty-title mb-2">No hay soluciones creadas</h5>
+                                            <p class="empty-description">Comienza creando tu primera solución visual</p>
+                                            <a href="{{ url_for('agregar_solucion') }}" class="btn corporate-btn">
+                                                <i class="fas fa-plus me-2"></i>Crear Primera Solución
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <style>
-/* Asegurar que los modales tengan el z-index correcto */
-.modal {
-    z-index: 1060 !important;
+.section-title {
+    color: var(--corporate-blue);
+    font-weight: 700;
+    margin-bottom: 0;
 }
 
-.modal-backdrop {
-    z-index: 1050 !important;
+.corporate-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
 }
 
-/* Mejorar la visibilidad del modal */
-.modal-content {
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+.corporate-table th {
+    background: var(--corporate-blue-light);
+    color: var(--corporate-blue);
+    font-weight: 600;
+    padding: 1rem;
+    border-bottom: 2px solid var(--corporate-blue);
+}
+
+.corporate-table td {
+    padding: 1rem;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--corporate-blue-light);
+}
+
+.corporate-table tbody tr:hover {
+    background: var(--corporate-blue-light);
+}
+
+.badge-estado {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.badge-activo {
+    background: var(--corporate-blue-light);
+    color: var(--corporate-blue);
+}
+
+.badge-inactivo {
+    background: var(--corporate-red-light);
+    color: var(--corporate-red);
+}
+
+.btn-action {
+    padding: 0.25rem 0.5rem;
     border: none;
-    border-radius: 12px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    transition: all 0.3s ease;
 }
 
-.modal-header {
-    border-radius: 12px 12px 0 0;
+.btn-edit {
+    background: var(--corporate-blue-light);
+    color: var(--corporate-blue);
+}
+
+.btn-edit:hover {
+    background: var(--corporate-blue);
+    color: var(--corporate-white);
+}
+
+.btn-delete {
+    background: var(--corporate-red-light);
+    color: var(--corporate-red);
+}
+
+.btn-delete:hover {
+    background: var(--corporate-red);
+    color: var(--corporate-white);
 }
 </style>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Inicializar tooltips
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
-
-    // Debug: Verificar que los modales se cargan
-    console.log('Modales cargados:', document.querySelectorAll('.modal').length);
-    
-    // Forzar el cierre de cualquier modal abierto previamente
-    var existingModals = document.querySelectorAll('.modal.show');
-    existingModals.forEach(function(modal) {
-        var bsModal = bootstrap.Modal.getInstance(modal);
-        if (bsModal) {
-            bsModal.hide();
-        }
-    });
-});
-</script>
 {% endblock %}
