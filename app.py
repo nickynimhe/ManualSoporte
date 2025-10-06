@@ -149,59 +149,66 @@ def permiso_requerido(permiso):
 # RUTAS PARA SOLUCIONES VISUALES - CORREGIDAS
 # =============================================
 
-@app.route('/soluciones_visuales')
+@app.route('/api/soluciones-visuales')
 @login_required
-def soluciones_visuales():
-    """Página principal de soluciones visuales"""
+def api_soluciones_visuales():
+    """API para obtener todas las soluciones visuales (JSON)"""
     cursor = None
     conexion = None
-    soluciones = []
     
     try:
         conexion = crear_conexion()
         if conexion:
             cursor = conexion.cursor()
             cursor.execute("""
-                SELECT id, titulo, categoria, descripcion, pasos, estado 
+                SELECT id, titulo, categoria, descripcion, pasos, imagen, estado,
+                       fecha_creacion, fecha_actualizacion
                 FROM soluciones_visuales 
                 WHERE estado = 'activo'
                 ORDER BY categoria, titulo
             """)
-            soluciones_data = cursor.fetchall()
             
-            for solucion in soluciones_data:
-                pasos = json.loads(solucion[4]) if solucion[4] else []
-                imagenes = []
+            soluciones = []
+            for row in cursor.fetchall():
+                # Manejar correctamente los pasos JSON
+                pasos_data = row[4] if row[4] else []
+                if isinstance(pasos_data, str):
+                    try:
+                        pasos_data = json.loads(pasos_data)
+                    except:
+                        pasos_data = []
                 
-                for paso in pasos:
-                    if paso.get('imagen'):
-                        # Asegurar que la ruta sea correcta
-                        imagenes.append(paso['imagen'])
+                # Manejar correctamente la imagen JSON
+                imagen_data = row[5] if row[5] else {}
+                if isinstance(imagen_data, str):
+                    try:
+                        imagen_data = json.loads(imagen_data)
+                    except:
+                        imagen_data = {}
                 
-                solucion_dict = {
-                    'id': solucion[0],
-                    'titulo': solucion[1],
-                    'categoria': solucion[2],
-                    'descripcion': solucion[3],
-                    'pasos': pasos,
-                    'estado': solucion[5],
-                    'imagenes': imagenes
-                }
-                soluciones.append(solucion_dict)
-                
+                soluciones.append({
+                    'id': row[0],
+                    'titulo': row[1],
+                    'categoria': row[2],
+                    'descripcion': row[3],
+                    'pasos': pasos_data,
+                    'imagen': imagen_data,
+                    'estado': row[6],
+                    'fecha_creacion': row[7].isoformat() if row[7] else None,
+                    'fecha_actualizacion': row[8].isoformat() if row[8] else None
+                })
+            
+            return jsonify(soluciones)
+            
     except Exception as e:
-        flash('Error al cargar las soluciones visuales', 'error')
-        print(f"Error en soluciones_visuales: {e}")
-        # Datos de ejemplo para desarrollo
-        soluciones = obtener_soluciones_ejemplo()
-    
+        print(f"Error en api_soluciones_visuales: {e}")
+        return jsonify({'error': str(e)}), 500
+        
     finally:
         if cursor is not None:
             cursor.close()
         if conexion is not None:
             conexion.close()
-    
-    return render_template('soluciones_visuales.html', soluciones=soluciones)
 
 def obtener_soluciones_ejemplo():
     """Datos de ejemplo para desarrollo"""
@@ -313,88 +320,25 @@ def obtener_soluciones_ejemplo():
         }
     ]
 
-@app.route('/gestion-soluciones')
+@app.route('/api/soluciones-visuales', methods=['POST'])
 @login_required
 @permiso_requerido('gestion_soluciones_visuales')
-def gestion_soluciones():
-    """Página de gestión de soluciones visuales"""
-    cursor = None
-    conexion = None
-    soluciones = []
-    
+def api_crear_solucion():
+    """API para crear nueva solución visual"""
     try:
-        conexion = crear_conexion()
-        if conexion:
-            cursor = conexion.cursor()
-            cursor.execute("""
-                SELECT id, titulo, categoria, descripcion, pasos, estado, fecha_creacion, fecha_actualizacion 
-                FROM soluciones_visuales 
-                ORDER BY fecha_actualizacion DESC
-            """)
-            soluciones_data = cursor.fetchall()
-            
-            for solucion in soluciones_data:
-                solucion_dict = {
-                    'id': solucion[0],
-                    'titulo': solucion[1],
-                    'categoria': solucion[2],
-                    'descripcion': solucion[3],
-                    'pasos': json.loads(solucion[4]) if solucion[4] else [],
-                    'estado': solucion[5],
-                    'fecha_creacion': solucion[6],
-                    'fecha_actualizacion': solucion[7]
-                }
-                soluciones.append(solucion_dict)
-                
-    except Exception as e:
-        flash('Error al cargar las soluciones', 'error')
-        print(f"Error en gestion_soluciones: {e}")
-        # Datos de ejemplo
-        soluciones = obtener_soluciones_ejemplo()
-    finally:
-        if cursor is not None:
-            cursor.close()
-        if conexion is not None:
-            conexion.close()
-    
-    return render_template('gestion_soluciones.html', soluciones=soluciones)
-
-@app.route('/agregar-solucion', methods=['GET', 'POST'])
-@login_required
-@permiso_requerido('gestion_soluciones_visuales')
-def agregar_solucion():
-    """Agregar nueva solución visual"""
-    if request.method == 'POST':
-        titulo = request.form.get('titulo')
-        categoria = request.form.get('categoria')
-        descripcion = request.form.get('descripcion')
-        estado = request.form.get('estado', 'activo')
+        data = request.get_json()
         
-        pasos = []
-        paso_count = 0
+        if not data:
+            return jsonify({'success': False, 'error': 'Datos no proporcionados'}), 400
         
-        while True:
-            paso_titulo = request.form.get(f'paso_titulo_{paso_count}')
-            if not paso_titulo:
-                break
-                
-            paso_descripcion = request.form.get(f'paso_descripcion_{paso_count}')
-            paso_imagen_file = request.files.get(f'paso_imagen_{paso_count}')
-            
-            imagen_path = None
-            if paso_imagen_file and paso_imagen_file.filename:
-                imagen_path = save_uploaded_file(paso_imagen_file, categoria)
-            
-            pasos.append({
-                'titulo': paso_titulo,
-                'descripcion': paso_descripcion,
-                'imagen': imagen_path
-            })
-            paso_count += 1
+        titulo = data.get('titulo')
+        categoria = data.get('categoria')
+        descripcion = data.get('descripcion', '')
+        pasos = data.get('pasos', [])
+        imagen = data.get('imagen', {})  # Ahora es un objeto JSON
         
-        if not titulo or not categoria or len(pasos) == 0:
-            flash('Título, categoría y al menos un paso son obligatorios', 'error')
-            return render_template('agregar_solucion.html')
+        if not titulo or not categoria:
+            return jsonify({'success': False, 'error': 'Título y categoría son obligatorios'}), 400
         
         cursor = None
         conexion = None
@@ -404,112 +348,112 @@ def agregar_solucion():
             if conexion:
                 cursor = conexion.cursor()
                 cursor.execute("""
-                    INSERT INTO soluciones_visuales (titulo, categoria, descripcion, pasos, estado) 
+                    INSERT INTO soluciones_visuales 
+                    (titulo, categoria, descripcion, pasos, imagen)
                     VALUES (%s, %s, %s, %s, %s)
-                """, (titulo, categoria, descripcion, json.dumps(pasos), estado))
+                    RETURNING id
+                """, (titulo, categoria, descripcion, json.dumps(pasos), json.dumps(imagen)))
                 
+                nuevo_id = cursor.fetchone()[0]
                 conexion.commit()
-                flash('Solución agregada correctamente', 'success')
-                return redirect(url_for('gestion_soluciones'))
+                
+                return jsonify({'success': True, 'id': nuevo_id})
                 
         except Exception as e:
-            flash('Error al agregar la solución', 'error')
-            print(f"Error en agregar_solucion: {e}")
+            print(f"Error creando solución: {e}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+            
         finally:
             if cursor is not None:
                 cursor.close()
             if conexion is not None:
                 conexion.close()
-    
-    return render_template('agregar_solucion.html')
+                
+    except Exception as e:
+        print(f"Error en api_crear_solucion: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
-@app.route('/editar-solucion/<int:id>', methods=['GET', 'POST'])
+@app.route('/api/soluciones-visuales/<int:id>', methods=['PUT'])
 @login_required
 @permiso_requerido('gestion_soluciones_visuales')
-def editar_solucion(id):
-    """Editar solución visual existente"""
+def api_actualizar_solucion(id):
+    """API para actualizar solución visual"""
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'success': False, 'error': 'Datos no proporcionados'}), 400
+        
+        titulo = data.get('titulo')
+        categoria = data.get('categoria')
+        descripcion = data.get('descripcion', '')
+        pasos = data.get('pasos', [])
+        imagen = data.get('imagen', {})  # Ahora es un objeto JSON
+        
+        if not titulo or not categoria:
+            return jsonify({'success': False, 'error': 'Título y categoría son obligatorios'}), 400
+        
+        cursor = None
+        conexion = None
+        
+        try:
+            conexion = crear_conexion()
+            if conexion:
+                cursor = conexion.cursor()
+                cursor.execute("""
+                    UPDATE soluciones_visuales 
+                    SET titulo = %s, categoria = %s, descripcion = %s, 
+                        pasos = %s, imagen = %s, fecha_actualizacion = CURRENT_TIMESTAMP
+                    WHERE id = %s
+                """, (titulo, categoria, descripcion, json.dumps(pasos), json.dumps(imagen), id))
+                
+                conexion.commit()
+                return jsonify({'success': True})
+                
+        except Exception as e:
+            print(f"Error actualizando solución: {e}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+            
+        finally:
+            if cursor is not None:
+                cursor.close()
+            if conexion is not None:
+                conexion.close()
+                
+    except Exception as e:
+        print(f"Error en api_actualizar_solucion: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/soluciones-visuales/<int:id>', methods=['DELETE'])
+@login_required
+@permiso_requerido('gestion_soluciones_visuales')
+def api_eliminar_solucion(id):
+    """API para eliminar (desactivar) solución visual"""
     cursor = None
     conexion = None
-    solucion = None
     
     try:
         conexion = crear_conexion()
         if conexion:
             cursor = conexion.cursor()
+            cursor.execute("""
+                UPDATE soluciones_visuales 
+                SET estado = 'inactivo', fecha_actualizacion = CURRENT_TIMESTAMP
+                WHERE id = %s
+            """, (id,))
             
-            if request.method == 'POST':
-                titulo = request.form.get('titulo')
-                categoria = request.form.get('categoria')
-                descripcion = request.form.get('descripcion')
-                estado = request.form.get('estado', 'activo')
-                
-                pasos = []
-                paso_count = 0
-                
-                while True:
-                    paso_titulo = request.form.get(f'paso_titulo_{paso_count}')
-                    if not paso_titulo:
-                        break
-                        
-                    paso_descripcion = request.form.get(f'paso_descripcion_{paso_count}')
-                    paso_imagen_file = request.files.get(f'paso_imagen_{paso_count}')
-                    paso_imagen_existente = request.form.get(f'paso_imagen_existente_{paso_count}')
-                    
-                    imagen_path = paso_imagen_existente
-                    if paso_imagen_file and paso_imagen_file.filename:
-                        imagen_path = save_uploaded_file(paso_imagen_file, categoria)
-                    
-                    pasos.append({
-                        'titulo': paso_titulo,
-                        'descripcion': paso_descripcion,
-                        'imagen': imagen_path
-                    })
-                    paso_count += 1
-                
-                if not titulo or not categoria or len(pasos) == 0:
-                    flash('Título, categoría y al menos un paso son obligatorios', 'error')
-                    return redirect(url_for('editar_solucion', id=id))
-                
-                cursor.execute("""
-                    UPDATE soluciones_visuales 
-                    SET titulo=%s, categoria=%s, descripcion=%s, pasos=%s, estado=%s, fecha_actualizacion=CURRENT_TIMESTAMP
-                    WHERE id=%s
-                """, (titulo, categoria, descripcion, json.dumps(pasos), estado, id))
-                
-                conexion.commit()
-                flash('Solución actualizada correctamente', 'success')
-                return redirect(url_for('gestion_soluciones'))
+            conexion.commit()
+            return jsonify({'success': True})
             
-            # GET: Cargar datos de la solución
-            cursor.execute("SELECT * FROM soluciones_visuales WHERE id = %s", (id,))
-            solucion_data = cursor.fetchone()
-            
-            if solucion_data:
-                solucion = {
-                    'id': solucion_data[0],
-                    'titulo': solucion_data[1],
-                    'categoria': solucion_data[2],
-                    'descripcion': solucion_data[3],
-                    'pasos': json.loads(solucion_data[4]) if solucion_data[4] else [],
-                    'estado': solucion_data[5],
-                    'fecha_creacion': solucion_data[6],
-                    'fecha_actualizacion': solucion_data[7]
-                }
-                
     except Exception as e:
-        flash('Error al cargar/editar la solución', 'error')
-        print(f"Error en editar_solucion: {e}")
+        print(f"Error eliminando solución: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+        
     finally:
         if cursor is not None:
             cursor.close()
         if conexion is not None:
             conexion.close()
-    
-    if not solucion:
-        flash('Solución no encontrada', 'error')
-        return redirect(url_for('gestion_soluciones'))
-    
-    return render_template('editar_solucion.html', solucion=solucion)
 
 # =============================================
 # RUTAS DE AUTENTICACIÓN (MANTENER)
