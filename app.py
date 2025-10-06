@@ -919,22 +919,20 @@ def agregar_ficha():
     conexion = None
     
     if request.method == 'POST':
-        # Obtener datos del formulario - manejar problema real o seleccionado
+        # Obtener datos del formulario
         categoria = request.form['categoria']
-        problema = request.form.get('problema_real') or request.form['problema']
+        problema = request.form['problema']
         descripcion = request.form['descripcion']
         causas = request.form['causas']
         solucion = request.form['solucion']
         palabras_clave = request.form['palabras_clave']
         
+        print(f"📝 Intentando agregar ficha: {categoria}, {problema}")
+        
         # Validar campos requeridos
         if not all([categoria, problema, causas, solucion]):
             flash('Por favor, complete todos los campos requeridos', 'error')
             return render_template('agregar_ficha.html')
-        
-        # Procesar causas (convertir saltos de línea a |)
-        causas_items = [item.strip() for item in causas.split('\n') if item.strip()]
-        causas_str = '|'.join(causas_items)
         
         try:
             conexion = crear_conexion()
@@ -943,13 +941,20 @@ def agregar_ficha():
                 cursor.execute('''
                     INSERT INTO fichas (categoria, problema, descripcion, causas, solucion, palabras_clave)
                     VALUES (%s, %s, %s, %s, %s, %s)
-                ''', (categoria, problema, descripcion, causas_str, solucion, palabras_clave))
+                ''', (categoria, problema, descripcion, causas, solucion, palabras_clave))
                 conexion.commit()
+                print("✅ Ficha agregada correctamente a la base de datos")
                 flash('Ficha agregada correctamente', 'success')
                 return redirect(url_for('index'))
+            else:
+                print("❌ No hay conexión a la base de datos")
+                flash('Error de conexión a la base de datos', 'error')
+                
         except Exception as e:
+            print(f"❌ Error al agregar la ficha: {str(e)}")
             flash('Error al agregar la ficha', 'error')
-            print(f"Error en agregar_ficha: {e}")
+            if conexion:
+                conexion.rollback()
         finally:
             if cursor is not None:
                 cursor.close()
