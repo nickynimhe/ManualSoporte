@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block title %}Políticas de Seguridad - Soporte Técnico{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- Header -->
+            <div class="card border-0 shadow-sm rounded-3 mb-4">
+                <div class="card-header bg-danger text-white text-center">
+                    <h1 class="mb-2"><i class="fas fa-shield-alt me-2"></i>{{ politicas.titulo }}</h1>
+                    <p class="mb-0 opacity-75">M@STV PRODUCCIONES S.A.S NIT 900.943.073-9</p>
+                </div>
+            </div>
+
+            <!-- Contenido de Políticas -->
+            <div class="card border-0 shadow-sm rounded-3">
+                <div class="card-body">
+                    {% for seccion in politicas.contenido %}
+                    <div class="politica-seccion mb-4 {% if not loop.last %}border-bottom pb-4{% endif %}">
+                        <h4 class="text-primary mb-3">
+                            {{ seccion.subtitulo }}
+                        </h4>
+                        
+                        {% if seccion.contenido_items %}
+                        <div class="ms-3">
+                            {% for item in seccion.contenido_items %}
+                            <div class="politica-item mb-2">
+                                <div class="d-flex align-items-start">
+                                    <i class="fas fa-circle me-2 mt-2" style="font-size: 0.4rem; color: #6c757d;"></i>
+                                    <span>{{ item | safe }}</span>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+
+                    <!-- Información de Contacto -->
+                    <div class="alert alert-info mt-4">
+                        <h5><i class="fas fa-envelope me-2"></i>Información de Contacto para Reportes</h5>
+                        <p class="mb-1"><strong>Email:</strong> ingenieria@mastvproducciones.net.co</p>
+                        <p class="mb-0"><strong>Canal oficial:</strong> Área de TI</p>
+                    </div>
+
+                    <!-- Aceptación y Firmas -->
+                    <div class="border-top pt-4 mt-4">
+                        <div class="alert alert-warning">
+                            <h5 class="mb-2">8. Aceptación</h5>
+                            <p class="mb-0">
+                                El colaborador declara haber leído, comprendido y aceptado las políticas y sanciones aquí 
+                                descritas, comprometiéndose a su cumplimiento.
+                            </p>
+                        </div>
+
+                        <!-- Firmas -->
+                        <div class="row mt-4">
+                            <div class="col-md-6">
+                                <div class="border p-4 text-center h-100">
+                                    <p class="mb-3"><strong>COLABORADOR</strong></p>
+                                    <div class="firma-linea mt-4 mb-3"></div>
+                                    <p class="mb-1">Nombre Completo</p>
+                                    <p class="mb-1">Cédula</p>
+                                    <p class="mb-0">Fecha: ________________</p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="border p-4 text-center h-100">
+                                    <p class="mb-3"><strong>REPRESENTANTE LEGAL</strong></p>
+                                    <div class="firma-linea mt-4 mb-3"></div>
+                                    <p class="mb-1"><strong>JUVENAL ROMERO RUEDA</strong></p>
+                                    <p class="mb-1">M@STV PRODUCCIONES S.A.S</p>
+                                    <p class="mb-1">NIT 900.943.073-9</p>
+                                    <p class="mb-0">Fecha de creación: 06/octubre/2025</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botones de acción -->
+            <div class="d-flex justify-content-center gap-3 mt-4">
+                <a href="{{ url_for('informacion_general') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Volver a Información General
+                </a>
+                <button onclick="window.print()" class="btn btn-primary">
+                    <i class="fas fa-print me-2"></i>Imprimir Políticas
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.politica-seccion {
+    page-break-inside: avoid;
+}
+
+.politica-item {
+    line-height: 1.6;
+    text-align: justify;
+}
+
+.firma-linea {
+    border-bottom: 2px solid #333;
+    width: 80%;
+    margin: 0 auto;
+    height: 1px;
+}
+
+.card-header h1 {
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+@media print {
+    .btn {
+        display: none !important;
+    }
+    
+    .card {
+        border: none !important;
+        box-shadow: none !important;
+    }
+    
+    .politica-seccion {
+        border-bottom: 1px solid #ddd !important;
+    }
+    
+    .alert {
+        border: 1px solid #000 !important;
+        background-color: transparent !important;
+    }
+}
+
+.card-header {
+    border-radius: 10px 10px 0 0 !important;
+}
+
+.text-primary {
+    color: #0d6efd !important;
+    font-weight: 600;
+}
+</style>
+{% endblock %}
