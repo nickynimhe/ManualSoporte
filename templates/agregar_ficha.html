@@ -205,6 +205,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const otroProblemaContainer = document.getElementById('otroProblemaContainer');
     const otroProblemaInput = document.getElementById('otro_problema');
     const causasPersonalizadasTextarea = document.getElementById('causas_personalizadas');
+    const solucionTextarea = document.getElementById('solucion'); // MOVIDO ARRIBA
+
+    // Inicializar textarea de solución con "1. " si está vacío
+    if (solucionTextarea && solucionTextarea.value.trim() === '') {
+        solucionTextarea.value = '1. ';
+    }
 
     // Inicialmente deshabilitar selects dependientes
     problemaSelect.disabled = true;
@@ -373,6 +379,34 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Autoenumerar pasos en solución al presionar Enter
+    if (solucionTextarea) {
+        solucionTextarea.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+
+                const { selectionStart, selectionEnd, value } = this;
+                const beforeCursor = value.substring(0, selectionStart);
+                const afterCursor = value.substring(selectionEnd);
+
+                // Obtener número del último paso
+                const lines = beforeCursor.split('\n');
+                const currentLine = lines[lines.length - 1];
+                const match = currentLine.match(/^(\d+)\.\s/);
+                let nextNumber = 1;
+                if (match) {
+                    nextNumber = parseInt(match[1], 10) + 1;
+                }
+
+                const insertText = '\n' + nextNumber + '. ';
+                const newCursorPos = selectionStart + insertText.length;
+
+                this.value = beforeCursor + insertText + afterCursor;
+                this.selectionStart = this.selectionEnd = newCursorPos;
+            }
+        });
+    }
+
     // Validación antes de enviar el formulario
     document.querySelector('form').addEventListener('submit', function(e) {
         const problemaSeleccionado = problemaSelect.value;
@@ -424,6 +458,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         if (solucionTextarea) {
+            // Formatear la solución (quitar numeración y unir con |)
             solucionTextarea.value = solucionTextarea.value.split('\n')
                 .map(line => line.replace(/^\d+\.\s*/, '').trim())
                 .filter(line => line.length > 0)
@@ -434,41 +469,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Inicializar tooltips Bootstrap 5
     const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     tooltipTriggerList.forEach(el => new bootstrap.Tooltip(el));
-
-    const solucionTextarea = document.getElementById('solucion');
-
-    // Inicializar textarea de solución con "1. " si está vacío
-    if (solucionTextarea && solucionTextarea.value.trim() === '') {
-        solucionTextarea.value = '1. ';
-    }
-
-    // Autoenumerar pasos en solución al presionar Enter
-    if (solucionTextarea) {
-        solucionTextarea.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-
-                const { selectionStart, selectionEnd, value } = this;
-                const beforeCursor = value.substring(0, selectionStart);
-                const afterCursor = value.substring(selectionEnd);
-
-                // Obtener número del último paso
-                const lines = beforeCursor.split('\n');
-                const currentLine = lines[lines.length - 1];
-                const match = currentLine.match(/^(\d+)\.\s/);
-                let nextNumber = 1;
-                if (match) {
-                    nextNumber = parseInt(match[1], 10) + 1;
-                }
-
-                const insertText = '\n' + nextNumber + '. ';
-                const newCursorPos = selectionStart + insertText.length;
-
-                this.value = beforeCursor + insertText + afterCursor;
-                this.selectionStart = this.selectionEnd = newCursorPos;
-            }
-        });
-    }
 });
 </script>
+
 {% endblock %}
