@@ -101,7 +101,7 @@ def crear_tablas():
         """)
         print("✅ Tabla 'fichas' lista")
 
-        # NUEVA: Tabla para soluciones visuales
+        # CORREGIDO: Tabla para soluciones visuales con la columna IMAGEN
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS soluciones_visuales (
                 id SERIAL PRIMARY KEY,
@@ -109,12 +109,13 @@ def crear_tablas():
                 categoria VARCHAR(50) NOT NULL,
                 descripcion TEXT,
                 pasos JSONB NOT NULL DEFAULT '[]',
+                imagen JSONB NOT NULL DEFAULT '[]',
                 estado VARCHAR(20) DEFAULT 'activo',
                 fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
-        print("✅ Tabla 'soluciones_visuales' lista")
+        print("✅ Tabla 'soluciones_visuales' lista (con columna imagen)")
 
         # Insertar usuarios si no existen
         usuarios_data = [
@@ -131,7 +132,7 @@ def crear_tablas():
                     'editar_fichas': rol == 'admin', 
                     'eliminar_fichas': rol == 'admin',
                     'cambiar_password': True,
-                    'gestion_soluciones_visuales': rol == 'admin'  # NUEVO PERMISO
+                    'gestion_soluciones_visuales': rol == 'admin'
                 })
                 cursor.execute(
                     "INSERT INTO usuarios (usuario, password, rol, permisos) VALUES (%s, %s, %s, %s)",
@@ -153,7 +154,8 @@ def crear_tablas():
                             'descripcion': 'Dentro de la plataforma Softv, ubique el menú desplegable lateral y seleccione la opción **Facturación** para continuar con el proceso.',
                             'imagen': 'softv/softv1.png'
                         }
-                    ])
+                    ]),
+                    'imagen': 'softv/softv_principal.png'
                 },
                 {
                     'titulo': '¿Como validar puertos en uso y la MAC del equipo?',
@@ -165,14 +167,15 @@ def crear_tablas():
                             'descripcion': 'Haga clic en el botón **Get Status** para que el sistema consulte la información actual del dispositivo.',
                             'imagen': 'vortex/vortex4.png'
                         }
-                    ])
+                    ]),
+                    'imagen': 'vortex/vortex_principal.png'
                 }
             ]
             
             for solucion in soluciones_ejemplo:
                 cursor.execute(
-                    "INSERT INTO soluciones_visuales (titulo, categoria, descripcion, pasos) VALUES (%s, %s, %s, %s)",
-                    (solucion['titulo'], solucion['categoria'], solucion['descripcion'], solucion['pasos'])
+                    "INSERT INTO soluciones_visuales (titulo, categoria, descripcion, pasos, imagen) VALUES (%s, %s, %s, %s, %s)",
+                    (solucion['titulo'], solucion['categoria'], solucion['descripcion'], solucion['pasos'], solucion['imagen'])
                 )
             print("✅ Soluciones visuales de ejemplo creadas")
 
@@ -238,6 +241,15 @@ def verificar_tablas():
         """)
         soluciones_existe = cursor.fetchone()[0]
         
+        # Verificar también las columnas de soluciones_visuales
+        cursor.execute("""
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'soluciones_visuales'
+        """)
+        columnas = [row[0] for row in cursor.fetchall()]
+        print(f"📋 Columnas de soluciones_visuales: {columnas}")
+        
         print(f"📊 Tabla 'usuarios' existe: {usuarios_existe}")
         print(f"📊 Tabla 'fichas' existe: {fichas_existe}")
         print(f"📊 Tabla 'soluciones_visuales' existe: {soluciones_existe}")
@@ -254,10 +266,62 @@ def verificar_tablas():
         if conexion is not None:
             conexion.close()
 
+def reparar_tabla_soluciones_visuales():
+    """Función específica para reparar la tabla soluciones_visuales si falta la columna imagen"""
+    conexion = None
+    cursor = None
+    
+    try:
+        conexion = crear_conexion()
+        if not conexion:
+            print("💥 No se pudo conectar para reparar tabla")
+            return False
+
+        cursor = conexion.cursor()
+        
+        # Verificar si la columna imagen existe
+        cursor.execute("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.columns 
+                WHERE table_name = 'soluciones_visuales' 
+                AND column_name = 'imagen'
+            )
+        """)
+        columna_imagen_existe = cursor.fetchone()[0]
+        
+        if not columna_imagen_existe:
+            print("🔧 Agregando columna 'imagen' a la tabla soluciones_visuales...")
+            cursor.execute("""
+                ALTER TABLE soluciones_visuales 
+                ADD COLUMN imagen VARCHAR(255)
+            """)
+            conexion.commit()
+            print("✅ Columna 'imagen' agregada correctamente")
+        else:
+            print("✅ La columna 'imagen' ya existe en soluciones_visuales")
+        
+        return True
+        
+    except Exception as err:
+        print(f"💥 Error reparando tabla: {err}")
+        if conexion:
+            conexion.rollback()
+        return False
+        
+    finally:
+        if cursor is not None:
+            cursor.close()
+        if conexion is not None:
+            conexion.close()
+
 if __name__ == "__main__":
     print("🚀 Ejecutando inicialización de base de datos...")
     
-    # Primero verificar si las tablas ya existen
+    # Primero reparar la tabla soluciones_visuales si es necesario
+    print("🛠️ Verificando estructura de soluciones_visuales...")
+    reparar_tabla_soluciones_visuales()
+    
+    # Luego verificar si las tablas ya existen
     if verificar_tablas():
         print("✅ Las tablas ya existen. No es necesario crearlas.")
     else:
