@@ -6,53 +6,15 @@ from werkzeug.security import check_password_hash, generate_password_hash
 import psycopg2
 import json
 from datetime import datetime
-import os
-from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.config.from_object(Config)
-
-# Configuración para subida de imágenes - USANDO TU ESTRUCTURA
-UPLOAD_FOLDER = 'static/img/soluciones'
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
-
-# Asegurar que los directorios existen
-os.makedirs(os.path.join(UPLOAD_FOLDER, 'softv'), exist_ok=True)
-os.makedirs(os.path.join(UPLOAD_FOLDER, 'vortex'), exist_ok=True)
 
 # Configurar Flask-Login
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 login_manager.login_message = 'Por favor inicia sesión para acceder a esta página.'
-
-def allowed_file(filename):
-    return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-def save_uploaded_file(file, categoria):
-    """Guardar archivo en la carpeta correspondiente según la categoría"""
-    if file and allowed_file(file.filename):
-        filename = secure_filename(file.filename)
-        # Agregar timestamp para hacer único el nombre
-        name, ext = os.path.splitext(filename)
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"{name}_{timestamp}{ext}"
-        
-        # Determinar la carpeta según la categoría
-        if categoria.lower() == 'softv':
-            folder = 'softv'
-        elif categoria.lower() == 'vortex':
-            folder = 'vortex'
-        else:
-            folder = 'otros'
-        
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], folder, filename)
-        file.save(filepath)
-        return f"img/soluciones/{folder}/{filename}"
-    return None
 
 @app.context_processor
 def inject_now():
@@ -80,8 +42,7 @@ class User(UserMixin):
             'agregar_fichas': False,
             'editar_fichas': False,
             'eliminar_fichas': False,
-            'cambiar_password': True,
-            'gestion_soluciones_visuales': False
+            'cambiar_password': True
         }
 
     def puede(self, permiso):
@@ -100,6 +61,7 @@ def load_user(user_id):
             cursor.execute("SELECT * FROM usuarios WHERE id = %s", (user_id,))
             user_data = cursor.fetchone()
             if user_data:
+                # Convertir tupla a diccionario
                 user_dict = {
                     'id': user_data[0],
                     'usuario': user_data[1],
@@ -110,6 +72,7 @@ def load_user(user_id):
                     'fecha_actualizacion': user_data[6]
                 }
                 
+                # Cargar permisos desde JSON
                 permisos = {}
                 if user_dict.get('permisos'):
                     try:
@@ -145,75 +108,72 @@ def permiso_requerido(permiso):
         return decorated_function
     return decorator
 
-# =============================================
-# RUTAS PARA SOLUCIONES VISUALES - CORREGIDAS
-# =============================================
+# Rutas de autenticación
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    # Si el usuario ya está autenticado, redirigir al index
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    
+    cursor = None
+    conexion = None
+    
+    if request.method == 'POST':
+        usuario = request.form['usuario']
+        password = request.form['password']
+        
+        try:
+            conexion = crear_conexion()
+            if conexion:
+                cursor = conexion.cursor()
+                cursor.execute("SELECT * FROM usuarios WHERE usuario = %s", (usuario,))
+                user_data = cursor.fetchone()
+                
+                if user_data and user_data[2] and user_data[2].strip():  # user_data[2] es password
+                    # Convertir tupla a diccionario
+                    user_dict = {
+                        'id': user_data[0],
+                        'usuario': user_data[1],
+                        'password': user_data[2],
+                        'rol': user_data[3],
+                        'permisos': user_data[4]
+                    }
+                    
+                    if check_password_hash(user_dict['password'], password):
+                        # Cargar permisos desde JSON
+                        permisos = {}
+                        if user_dict.get('permisos'):
+                            try:
+                                permisos = json.loads(user_dict['permisos'])
+                            except:
+                                permisos = {}
+                        
+                        user = User(user_dict['id'], user_dict['usuario'], user_dict['rol'], permisos)
+                        login_user(user)
+                        flash('¡Inicio de sesión exitoso!', 'success')
+                        return redirect(url_for('index'))
+                    else:
+                        flash('Usuario o contraseña incorrectos', 'error')
+                else:
+                    flash('Usuario no encontrado', 'error')
+            else:
+                flash('Error de conexión a la base de datos', 'error')
+                
+        except Exception as e:
+            flash('Error de base de datos', 'error')
+            print(f"Error en login: {e}")
+        finally:
+            if cursor is not None:
+                cursor.close()
+            if conexion is not None:
+                conexion.close()
+    
+    return render_template('login.html')
 
 @app.route('/soluciones_visuales')
 @login_required
 def soluciones_visuales():
-    """Página principal de soluciones visuales"""
-    cursor = None
-    conexion = None
-    soluciones = []
-    
-    try:
-        conexion = crear_conexion()
-        if conexion:
-            cursor = conexion.cursor()
-            cursor.execute("""
-                SELECT id, titulo, categoria, descripcion, pasos, imagen, estado 
-                FROM soluciones_visuales 
-                WHERE estado = 'activo'
-                ORDER BY categoria, titulo
-            """)
-            soluciones_data = cursor.fetchall()
-            
-            for solucion in soluciones_data:
-                # Manejar pasos JSON
-                pasos = []
-                if solucion[4]:  # pasos
-                    try:
-                        pasos = json.loads(solucion[4])
-                    except:
-                        pasos = []
-                
-                # Manejar imagen JSON
-                imagen = {}
-                if solucion[5]:  # imagen
-                    try:
-                        imagen = json.loads(solucion[5])
-                    except:
-                        imagen = {}
-                
-                solucion_dict = {
-                    'id': solucion[0],
-                    'titulo': solucion[1],
-                    'categoria': solucion[2],
-                    'descripcion': solucion[3],
-                    'pasos': pasos,
-                    'imagen': imagen,
-                    'estado': solucion[6]
-                }
-                soluciones.append(solucion_dict)
-                
-    except Exception as e:
-        flash('Error al cargar las soluciones visuales', 'error')
-        print(f"Error en soluciones_visuales: {e}")
-        # Datos de ejemplo para desarrollo
-        soluciones = obtener_soluciones_ejemplo()
-    
-    finally:
-        if cursor is not None:
-            cursor.close()
-        if conexion is not None:
-            conexion.close()
-    
-    return render_template('soluciones_visuales.html', soluciones=soluciones)
-
-def obtener_soluciones_ejemplo():
-    """Datos de ejemplo para desarrollo"""
-    return [
+    soluciones = [
         {
             'id': 1,
             'titulo': '¿Como consultamos clientes?',
@@ -320,251 +280,7 @@ def obtener_soluciones_ejemplo():
             'descripcion': 'Validar si el servicio esta activo'
         }
     ]
-
-@app.route('/api/soluciones-visuales', methods=['POST'])
-@login_required
-@permiso_requerido('gestion_soluciones_visuales')
-def api_crear_solucion():
-    """API para crear nueva solución visual"""
-    try:
-        data = request.get_json()
-        
-        if not data:
-            return jsonify({'success': False, 'error': 'Datos no proporcionados'}), 400
-        
-        titulo = data.get('titulo')
-        categoria = data.get('categoria')
-        descripcion = data.get('descripcion', '')
-        pasos = data.get('pasos', [])
-        imagen = data.get('imagen', {})  # Ahora es un objeto JSON
-        
-        if not titulo or not categoria:
-            return jsonify({'success': False, 'error': 'Título y categoría son obligatorios'}), 400
-        
-        cursor = None
-        conexion = None
-        
-        try:
-            conexion = crear_conexion()
-            if conexion:
-                cursor = conexion.cursor()
-                cursor.execute("""
-                    INSERT INTO soluciones_visuales 
-                    (titulo, categoria, descripcion, pasos, imagen)
-                    VALUES (%s, %s, %s, %s, %s)
-                    RETURNING id
-                """, (titulo, categoria, descripcion, json.dumps(pasos), json.dumps(imagen)))
-                
-                nuevo_id = cursor.fetchone()[0]
-                conexion.commit()
-                
-                return jsonify({'success': True, 'id': nuevo_id})
-                
-        except Exception as e:
-            print(f"Error creando solución: {e}")
-            return jsonify({'success': False, 'error': str(e)}), 500
-            
-        finally:
-            if cursor is not None:
-                cursor.close()
-            if conexion is not None:
-                conexion.close()
-                
-    except Exception as e:
-        print(f"Error en api_crear_solucion: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@app.route('/api/soluciones-visuales/<int:id>', methods=['PUT'])
-@login_required
-@permiso_requerido('gestion_soluciones_visuales')
-def api_actualizar_solucion(id):
-    """API para actualizar solución visual"""
-    try:
-        data = request.get_json()
-        
-        if not data:
-            return jsonify({'success': False, 'error': 'Datos no proporcionados'}), 400
-        
-        titulo = data.get('titulo')
-        categoria = data.get('categoria')
-        descripcion = data.get('descripcion', '')
-        pasos = data.get('pasos', [])
-        imagen = data.get('imagen', {})  # Ahora es un objeto JSON
-        
-        if not titulo or not categoria:
-            return jsonify({'success': False, 'error': 'Título y categoría son obligatorios'}), 400
-        
-        cursor = None
-        conexion = None
-        
-        try:
-            conexion = crear_conexion()
-            if conexion:
-                cursor = conexion.cursor()
-                cursor.execute("""
-                    UPDATE soluciones_visuales 
-                    SET titulo = %s, categoria = %s, descripcion = %s, 
-                        pasos = %s, imagen = %s, fecha_actualizacion = CURRENT_TIMESTAMP
-                    WHERE id = %s
-                """, (titulo, categoria, descripcion, json.dumps(pasos), json.dumps(imagen), id))
-                
-                conexion.commit()
-                return jsonify({'success': True})
-                
-        except Exception as e:
-            print(f"Error actualizando solución: {e}")
-            return jsonify({'success': False, 'error': str(e)}), 500
-            
-        finally:
-            if cursor is not None:
-                cursor.close()
-            if conexion is not None:
-                conexion.close()
-                
-    except Exception as e:
-        print(f"Error en api_actualizar_solucion: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@app.route('/api/soluciones-visuales/<int:id>', methods=['DELETE'])
-@login_required
-@permiso_requerido('gestion_soluciones_visuales')
-def api_eliminar_solucion(id):
-    """API para eliminar (desactivar) solución visual"""
-    cursor = None
-    conexion = None
-    
-    try:
-        conexion = crear_conexion()
-        if conexion:
-            cursor = conexion.cursor()
-            cursor.execute("""
-                UPDATE soluciones_visuales 
-                SET estado = 'inactivo', fecha_actualizacion = CURRENT_TIMESTAMP
-                WHERE id = %s
-            """, (id,))
-            
-            conexion.commit()
-            return jsonify({'success': True})
-            
-    except Exception as e:
-        print(f"Error eliminando solución: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
-        
-    finally:
-        if cursor is not None:
-            cursor.close()
-        if conexion is not None:
-            conexion.close()
-
-# =============================================
-# RUTAS DE AUTENTICACIÓN (MANTENER)
-# =============================================
-
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if current_user.is_authenticated:
-        return redirect(url_for('index'))
-    
-    if request.method == 'POST':
-        usuario = request.form['usuario']
-        password = request.form['password']
-        
-        cursor = None
-        conexion = None
-        
-        try:
-            conexion = crear_conexion()
-            if conexion:
-                cursor = conexion.cursor()
-                cursor.execute("SELECT * FROM usuarios WHERE usuario = %s", (usuario,))
-                user_data = cursor.fetchone()
-                
-                if user_data and user_data[2]:
-                    user_dict = {
-                        'id': user_data[0],
-                        'usuario': user_data[1],
-                        'password': user_data[2],
-                        'rol': user_data[3],
-                        'permisos': user_data[4]
-                    }
-                    
-                    if check_password_hash(user_dict['password'], password):
-                        permisos = {}
-                        if user_dict.get('permisos'):
-                            try:
-                                permisos = json.loads(user_dict['permisos'])
-                            except:
-                                permisos = {}
-                        
-                        user = User(user_dict['id'], user_dict['usuario'], user_dict['rol'], permisos)
-                        login_user(user)
-                        flash('¡Inicio de sesión exitoso!', 'success')
-                        return redirect(url_for('index'))
-                    else:
-                        flash('Usuario o contraseña incorrectos', 'error')
-                else:
-                    flash('Usuario no encontrado', 'error')
-                    
-        except Exception as e:
-            flash('Error de base de datos', 'error')
-            print(f"Error en login: {e}")
-        finally:
-            if cursor is not None:
-                cursor.close()
-            if conexion is not None:
-                conexion.close()
-    
-    return render_template('login.html')
-
-@app.route('/logout')
-@login_required
-def logout():
-    logout_user()
-    flash('Sesión cerrada correctamente', 'info')
-    return redirect(url_for('login'))
-
-@app.route('/')
-@login_required
-def index():
-    if not current_user.puede('ver_fichas'):
-        flash('No tienes permisos para ver las fichas', 'error')
-        return redirect(url_for('login'))
-    
-    cursor = None
-    conexion = None
-    fichas = []
-    
-    try:
-        conexion = crear_conexion()
-        if conexion:
-            cursor = conexion.cursor()
-            cursor.execute("SELECT * FROM fichas ORDER BY fecha_actualizacion DESC LIMIT 10")
-            fichas_data = cursor.fetchall()
-            
-            for ficha in fichas_data:
-                ficha_dict = {
-                    'id': ficha[0],
-                    'categoria': ficha[1],
-                    'problema': ficha[2],
-                    'descripcion': ficha[3],
-                    'causas': ficha[4],
-                    'solucion': ficha[5],
-                    'palabras_clave': ficha[6],
-                    'fecha_creacion': ficha[7],
-                    'fecha_actualizacion': ficha[8]
-                }
-                fichas.append(ficha_dict)
-                
-    except Exception as e:
-        flash('Error al cargar las fichas', 'error')
-        print(f"Error en index: {e}")
-    finally:
-        if cursor is not None:
-            cursor.close()
-        if conexion is not None:
-            conexion.close()
-    
-    return render_template('index.html', fichas=fichas, user=current_user)
+    return render_template('soluciones_visuales.html', soluciones=soluciones)
 
 @app.route('/atencion_telefonica')
 @login_required
@@ -850,6 +566,13 @@ def informacion_general():
     
     return render_template('informacion_general.html', informacion=informacion)
 
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    flash('Sesión cerrada correctamente', 'info')
+    return redirect(url_for('login'))
+
 # Ruta para cambiar contraseña (todos los usuarios)
 @app.route('/cambiar_password', methods=['GET', 'POST'])
 @login_required
@@ -990,8 +713,7 @@ def editar_usuario(id):
                     'agregar_fichas': 'agregar_fichas' in request.form,
                     'editar_fichas': 'editar_fichas' in request.form,
                     'eliminar_fichas': 'eliminar_fichas' in request.form,
-                    'cambiar_password': True,  # Siempre permitido
-                    'gestion_soluciones_visuales': 'gestion_soluciones_visuales' in request.form
+                    'cambiar_password': True  # Siempre permitido
                 }
                 
                 permisos_json = json.dumps(permisos)
@@ -1078,8 +800,7 @@ def agregar_usuario():
             'agregar_fichas': 'agregar_fichas' in request.form,
             'editar_fichas': 'editar_fichas' in request.form,
             'eliminar_fichas': 'eliminar_fichas' in request.form,
-            'cambiar_password': True,  # Siempre permitido
-            'gestion_soluciones_visuales': 'gestion_soluciones_visuales' in request.form
+            'cambiar_password': True  # Siempre permitido
         }
         
         permisos_json = json.dumps(permisos)
@@ -1141,6 +862,51 @@ def eliminar_usuario(id):
             conexion.close()
     
     return redirect(url_for('gestion_usuarios'))
+
+# Rutas principales
+@app.route('/')
+@login_required
+def index():
+    if not current_user.puede('ver_fichas'):
+        flash('No tienes permisos para ver las fichas', 'error')
+        return redirect(url_for('login'))
+    
+    cursor = None
+    conexion = None
+    fichas = []
+    
+    try:
+        conexion = crear_conexion()
+        if conexion:
+            cursor = conexion.cursor()
+            cursor.execute("SELECT * FROM fichas ORDER BY fecha_actualizacion DESC")
+            fichas_data = cursor.fetchall()
+            
+            # Convertir tuplas a diccionarios
+            for ficha in fichas_data:
+                ficha_dict = {
+                    'id': ficha[0],
+                    'categoria': ficha[1],
+                    'problema': ficha[2],
+                    'descripcion': ficha[3],
+                    'causas': ficha[4],
+                    'solucion': ficha[5],
+                    'palabras_clave': ficha[6],
+                    'fecha_creacion': ficha[7],
+                    'fecha_actualizacion': ficha[8]
+                }
+                fichas.append(ficha_dict)
+                
+    except Exception as e:
+        flash('Error al cargar las fichas', 'error')
+        print(f"Error en index: {e}")
+    finally:
+        if cursor is not None:
+            cursor.close()
+        if conexion is not None:
+            conexion.close()
+    
+    return render_template('index.html', fichas=fichas, user=current_user)
 
 @app.route('/agregar', methods=['GET', 'POST'])
 @login_required
@@ -1436,8 +1202,5 @@ def obtener_problemas(categoria):
 if __name__ == '__main__':
     with app.app_context():
         print("🚀 Iniciando aplicación Flask...")
-        print("📦 Creando tablas de base de datos...")
         crear_tablas()
-        print("✅ Aplicación lista")
-        print("📁 Estructura de imágenes: static/img/soluciones/")
     app.run(host='0.0.0.0', port=5000, debug=True)
