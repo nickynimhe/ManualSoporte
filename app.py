@@ -149,66 +149,67 @@ def permiso_requerido(permiso):
 # RUTAS PARA SOLUCIONES VISUALES - CORREGIDAS
 # =============================================
 
-@app.route('/api/soluciones-visuales')
+@app.route('/soluciones_visuales')
 @login_required
-def api_soluciones_visuales():
-    """API para obtener todas las soluciones visuales (JSON)"""
+def soluciones_visuales():
+    """Página principal de soluciones visuales"""
     cursor = None
     conexion = None
+    soluciones = []
     
     try:
         conexion = crear_conexion()
         if conexion:
             cursor = conexion.cursor()
             cursor.execute("""
-                SELECT id, titulo, categoria, descripcion, pasos, imagen, estado,
-                       fecha_creacion, fecha_actualizacion
+                SELECT id, titulo, categoria, descripcion, pasos, imagen, estado 
                 FROM soluciones_visuales 
                 WHERE estado = 'activo'
                 ORDER BY categoria, titulo
             """)
+            soluciones_data = cursor.fetchall()
             
-            soluciones = []
-            for row in cursor.fetchall():
-                # Manejar correctamente los pasos JSON
-                pasos_data = row[4] if row[4] else []
-                if isinstance(pasos_data, str):
+            for solucion in soluciones_data:
+                # Manejar pasos JSON
+                pasos = []
+                if solucion[4]:  # pasos
                     try:
-                        pasos_data = json.loads(pasos_data)
+                        pasos = json.loads(solucion[4])
                     except:
-                        pasos_data = []
+                        pasos = []
                 
-                # Manejar correctamente la imagen JSON
-                imagen_data = row[5] if row[5] else {}
-                if isinstance(imagen_data, str):
+                # Manejar imagen JSON
+                imagen = {}
+                if solucion[5]:  # imagen
                     try:
-                        imagen_data = json.loads(imagen_data)
+                        imagen = json.loads(solucion[5])
                     except:
-                        imagen_data = {}
+                        imagen = {}
                 
-                soluciones.append({
-                    'id': row[0],
-                    'titulo': row[1],
-                    'categoria': row[2],
-                    'descripcion': row[3],
-                    'pasos': pasos_data,
-                    'imagen': imagen_data,
-                    'estado': row[6],
-                    'fecha_creacion': row[7].isoformat() if row[7] else None,
-                    'fecha_actualizacion': row[8].isoformat() if row[8] else None
-                })
-            
-            return jsonify(soluciones)
-            
+                solucion_dict = {
+                    'id': solucion[0],
+                    'titulo': solucion[1],
+                    'categoria': solucion[2],
+                    'descripcion': solucion[3],
+                    'pasos': pasos,
+                    'imagen': imagen,
+                    'estado': solucion[6]
+                }
+                soluciones.append(solucion_dict)
+                
     except Exception as e:
-        print(f"Error en api_soluciones_visuales: {e}")
-        return jsonify({'error': str(e)}), 500
-        
+        flash('Error al cargar las soluciones visuales', 'error')
+        print(f"Error en soluciones_visuales: {e}")
+        # Datos de ejemplo para desarrollo
+        soluciones = obtener_soluciones_ejemplo()
+    
     finally:
         if cursor is not None:
             cursor.close()
         if conexion is not None:
             conexion.close()
+    
+    return render_template('soluciones_visuales.html', soluciones=soluciones)
 
 def obtener_soluciones_ejemplo():
     """Datos de ejemplo para desarrollo"""
