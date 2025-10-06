@@ -319,14 +319,14 @@
 const SOLUTIONS_DATA = {
     {% for solucion in soluciones %}
     {{ solucion.id }}: {
-        titulo: "{{ solucion.titulo|escapejs }}",
-        servicio: "{{ solucion.categoria|escapejs }}",
+        titulo: {{ solucion.titulo | tojson }},
+        servicio: {{ solucion.categoria | tojson }},
         pasos: [
             {% for paso in solucion.pasos %}
             {
-                imagen: "{{ paso.imagen|default('', true)|escapejs }}",
-                titulo: "{{ paso.titulo|escapejs }}",
-                descripcion: "{{ paso.descripcion|escapejs }}"
+                imagen: {{ paso.imagen | default('', true) | tojson }},
+                titulo: {{ paso.titulo | tojson }},
+                descripcion: {{ paso.descripcion | tojson }}
             }{% if not loop.last %},{% endif %}
             {% endfor %}
         ]
