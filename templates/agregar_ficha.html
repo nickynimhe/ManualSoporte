@@ -10,6 +10,23 @@
                 <i class="fas fa-plus-circle"></i>
                 <h4 class="mb-0">Agregar Nueva Ficha</h4>
             </div>
+
+            <div class="card-body">
+    <!-- Mostrar mensajes flash -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
+                    <strong>{{ 'Error:' if category == 'error' else 'Éxito:' }}</strong> {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <form method="POST" action="{{ url_for('agregar_ficha') }}">
+    <!-- resto del formulario... -->
+        
             <div class="card-body">
                 <form method="POST" action="{{ url_for('agregar_ficha') }}" novalidate autocomplete="off" spellcheck="false">
                     <div class="mb-3">
@@ -472,3 +489,4 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
+
