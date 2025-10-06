@@ -372,6 +372,11 @@
                                         <i class="fas fa-plus me-2"></i>Agregar Ficha
                                     </a>
                                 </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('politicas_seguridad') }}">
+                                        <i class="fas fa-shield-alt me-2"></i>Políticas de Seguridad CRM
+                                    </a>
+                                </li>
                                 {% endif %}
                                 {% if current_user.rol == 'admin' %}
                                 <li>
@@ -566,3 +571,4 @@
     </script>
 </body>
 </html>
+
