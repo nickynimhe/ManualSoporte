@@ -12,14 +12,15 @@ from werkzeug.utils import secure_filename
 app = Flask(__name__)
 app.config.from_object(Config)
 
-# Configuración para subida de imágenes
-UPLOAD_FOLDER = 'static/uploads/soluciones'
+# Configuración para subida de imágenes - USANDO TU ESTRUCTURA
+UPLOAD_FOLDER = 'static/img/soluciones'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
 
-# Asegurar que el directorio de uploads existe
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+# Asegurar que los directorios existen
+os.makedirs(os.path.join(UPLOAD_FOLDER, 'softv'), exist_ok=True)
+os.makedirs(os.path.join(UPLOAD_FOLDER, 'vortex'), exist_ok=True)
 
 # Configurar Flask-Login
 login_manager = LoginManager()
@@ -31,7 +32,8 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-def save_uploaded_file(file):
+def save_uploaded_file(file, categoria):
+    """Guardar archivo en la carpeta correspondiente según la categoría"""
     if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
         # Agregar timestamp para hacer único el nombre
@@ -39,9 +41,17 @@ def save_uploaded_file(file):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"{name}_{timestamp}{ext}"
         
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        # Determinar la carpeta según la categoría
+        if categoria.lower() == 'softv':
+            folder = 'softv'
+        elif categoria.lower() == 'vortex':
+            folder = 'vortex'
+        else:
+            folder = 'otros'
+        
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], folder, filename)
         file.save(filepath)
-        return f"uploads/soluciones/{filename}"
+        return f"img/soluciones/{folder}/{filename}"
     return None
 
 @app.context_processor
@@ -90,7 +100,6 @@ def load_user(user_id):
             cursor.execute("SELECT * FROM usuarios WHERE id = %s", (user_id,))
             user_data = cursor.fetchone()
             if user_data:
-                # Convertir tupla a diccionario
                 user_dict = {
                     'id': user_data[0],
                     'usuario': user_data[1],
@@ -101,7 +110,6 @@ def load_user(user_id):
                     'fecha_actualizacion': user_data[6]
                 }
                 
-                # Cargar permisos desde JSON
                 permisos = {}
                 if user_dict.get('permisos'):
                     try:
@@ -138,13 +146,13 @@ def permiso_requerido(permiso):
     return decorator
 
 # =============================================
-# RUTAS MEJORADAS PARA GESTIÓN DE SOLUCIONES VISUALES
+# RUTAS PARA SOLUCIONES VISUALES - CORREGIDAS
 # =============================================
 
 @app.route('/soluciones_visuales')
 @login_required
 def soluciones_visuales():
-    """Página principal de soluciones visuales - ahora con datos de BD"""
+    """Página principal de soluciones visuales"""
     cursor = None
     conexion = None
     soluciones = []
@@ -154,7 +162,7 @@ def soluciones_visuales():
         if conexion:
             cursor = conexion.cursor()
             cursor.execute("""
-                SELECT id, titulo, categoria, descripcion, pasos, estado, fecha_creacion, fecha_actualizacion 
+                SELECT id, titulo, categoria, descripcion, pasos, estado 
                 FROM soluciones_visuales 
                 WHERE estado = 'activo'
                 ORDER BY categoria, titulo
@@ -165,9 +173,9 @@ def soluciones_visuales():
                 pasos = json.loads(solucion[4]) if solucion[4] else []
                 imagenes = []
                 
-                # Extraer todas las imágenes de los pasos
                 for paso in pasos:
                     if paso.get('imagen'):
+                        # Asegurar que la ruta sea correcta
                         imagenes.append(paso['imagen'])
                 
                 solucion_dict = {
@@ -177,8 +185,6 @@ def soluciones_visuales():
                     'descripcion': solucion[3],
                     'pasos': pasos,
                     'estado': solucion[5],
-                    'fecha_creacion': solucion[6],
-                    'fecha_actualizacion': solucion[7],
                     'imagenes': imagenes
                 }
                 soluciones.append(solucion_dict)
@@ -186,6 +192,8 @@ def soluciones_visuales():
     except Exception as e:
         flash('Error al cargar las soluciones visuales', 'error')
         print(f"Error en soluciones_visuales: {e}")
+        # Datos de ejemplo para desarrollo
+        soluciones = obtener_soluciones_ejemplo()
     
     finally:
         if cursor is not None:
@@ -195,11 +203,38 @@ def soluciones_visuales():
     
     return render_template('soluciones_visuales.html', soluciones=soluciones)
 
+def obtener_soluciones_ejemplo():
+    """Datos de ejemplo para desarrollo"""
+    return [
+        {
+            'id': 1,
+            'titulo': '¿Como consultamos clientes?',
+            'categoria': 'Softv',
+            'descripcion': 'Busqueda del cliente paso a paso',
+            'pasos': [
+                {'titulo': 'Paso 1', 'descripcion': 'Abrir Softv', 'imagen': 'img/soluciones/softv/softv1.png'},
+                {'titulo': 'Paso 2', 'descripcion': 'Ir a módulo de clientes', 'imagen': 'img/soluciones/softv/softv2.png'}
+            ],
+            'imagenes': ['img/soluciones/softv/softv1.png', 'img/soluciones/softv/softv2.png']
+        },
+        {
+            'id': 2,
+            'titulo': '¿Como buscar un usuario?',
+            'categoria': 'Vortex',
+            'descripcion': 'Buscar a un usuario en Vortex',
+            'pasos': [
+                {'titulo': 'Paso 1', 'descripcion': 'Abrir Vortex', 'imagen': 'img/soluciones/vortex/vortex1.png'},
+                {'titulo': 'Paso 2', 'descripcion': 'Buscar por nombre', 'imagen': 'img/soluciones/vortex/vortex2.png'}
+            ],
+            'imagenes': ['img/soluciones/vortex/vortex1.png', 'img/soluciones/vortex/vortex2.png']
+        }
+    ]
+
 @app.route('/gestion-soluciones')
 @login_required
 @permiso_requerido('gestion_soluciones_visuales')
 def gestion_soluciones():
-    """Página principal de gestión de soluciones visuales"""
+    """Página de gestión de soluciones visuales"""
     cursor = None
     conexion = None
     soluciones = []
@@ -231,6 +266,8 @@ def gestion_soluciones():
     except Exception as e:
         flash('Error al cargar las soluciones', 'error')
         print(f"Error en gestion_soluciones: {e}")
+        # Datos de ejemplo
+        soluciones = obtener_soluciones_ejemplo()
     finally:
         if cursor is not None:
             cursor.close()
@@ -243,14 +280,13 @@ def gestion_soluciones():
 @login_required
 @permiso_requerido('gestion_soluciones_visuales')
 def agregar_solucion():
-    """Agregar nueva solución visual con soporte para subida de imágenes"""
+    """Agregar nueva solución visual"""
     if request.method == 'POST':
         titulo = request.form.get('titulo')
         categoria = request.form.get('categoria')
         descripcion = request.form.get('descripcion')
         estado = request.form.get('estado', 'activo')
         
-        # Recopilar pasos del formulario
         pasos = []
         paso_count = 0
         
@@ -262,10 +298,9 @@ def agregar_solucion():
             paso_descripcion = request.form.get(f'paso_descripcion_{paso_count}')
             paso_imagen_file = request.files.get(f'paso_imagen_{paso_count}')
             
-            # Procesar imagen si se subió
             imagen_path = None
             if paso_imagen_file and paso_imagen_file.filename:
-                imagen_path = save_uploaded_file(paso_imagen_file)
+                imagen_path = save_uploaded_file(paso_imagen_file, categoria)
             
             pasos.append({
                 'titulo': paso_titulo,
@@ -309,7 +344,7 @@ def agregar_solucion():
 @login_required
 @permiso_requerido('gestion_soluciones_visuales')
 def editar_solucion(id):
-    """Editar solución visual existente con soporte para imágenes"""
+    """Editar solución visual existente"""
     cursor = None
     conexion = None
     solucion = None
@@ -325,7 +360,6 @@ def editar_solucion(id):
                 descripcion = request.form.get('descripcion')
                 estado = request.form.get('estado', 'activo')
                 
-                # Recopilar pasos del formulario
                 pasos = []
                 paso_count = 0
                 
@@ -338,10 +372,9 @@ def editar_solucion(id):
                     paso_imagen_file = request.files.get(f'paso_imagen_{paso_count}')
                     paso_imagen_existente = request.form.get(f'paso_imagen_existente_{paso_count}')
                     
-                    # Procesar imagen: mantener existente o subir nueva
                     imagen_path = paso_imagen_existente
                     if paso_imagen_file and paso_imagen_file.filename:
-                        imagen_path = save_uploaded_file(paso_imagen_file)
+                        imagen_path = save_uploaded_file(paso_imagen_file, categoria)
                     
                     pasos.append({
                         'titulo': paso_titulo,
@@ -395,109 +428,8 @@ def editar_solucion(id):
     
     return render_template('editar_solucion.html', solucion=solucion)
 
-@app.route('/eliminar-solucion/<int:id>')
-@login_required
-@permiso_requerido('gestion_soluciones_visuales')
-def eliminar_solucion(id):
-    """Eliminar solución visual"""
-    cursor = None
-    conexion = None
-    
-    try:
-        conexion = crear_conexion()
-        if conexion:
-            cursor = conexion.cursor()
-            cursor.execute("DELETE FROM soluciones_visuales WHERE id = %s", (id,))
-            conexion.commit()
-            flash('Solución eliminada correctamente', 'success')
-    except Exception as e:
-        flash('Error al eliminar la solución', 'error')
-        print(f"Error en eliminar_solucion: {e}")
-    finally:
-        if cursor is not None:
-            cursor.close()
-        if conexion is not None:
-            conexion.close()
-    
-    return redirect(url_for('gestion_soluciones'))
-
-@app.route('/cambiar-estado-solucion/<int:id>/<estado>')
-@login_required
-@permiso_requerido('gestion_soluciones_visuales')
-def cambiar_estado_solucion(id, estado):
-    """Cambiar estado de solución visual (activo/inactivo)"""
-    cursor = None
-    conexion = None
-    
-    try:
-        conexion = crear_conexion()
-        if conexion:
-            cursor = conexion.cursor()
-            cursor.execute("""
-                UPDATE soluciones_visuales 
-                SET estado=%s, fecha_actualizacion=CURRENT_TIMESTAMP
-                WHERE id=%s
-            """, (estado, id))
-            conexion.commit()
-            
-            estado_msg = "activada" if estado == "activo" else "desactivada"
-            flash(f'Solución {estado_msg} correctamente', 'success')
-    except Exception as e:
-        flash('Error al cambiar el estado de la solución', 'error')
-        print(f"Error en cambiar_estado_solucion: {e}")
-    finally:
-        if cursor is not None:
-            cursor.close()
-        if conexion is not None:
-            conexion.close()
-    
-    return redirect(url_for('gestion_soluciones'))
-
-@app.route('/api/soluciones-visuales')
-@login_required
-def api_soluciones_visuales():
-    """API para obtener soluciones visuales (usado en soluciones_visuales.html)"""
-    cursor = None
-    conexion = None
-    soluciones = []
-    
-    try:
-        conexion = crear_conexion()
-        if conexion:
-            cursor = conexion.cursor()
-            cursor.execute("""
-                SELECT id, titulo, categoria, descripcion, pasos 
-                FROM soluciones_visuales 
-                WHERE estado = 'activo'
-                ORDER BY categoria, titulo
-            """)
-            soluciones_data = cursor.fetchall()
-            
-            for solucion in soluciones_data:
-                pasos = json.loads(solucion[4]) if solucion[4] else []
-                imagenes = [paso['imagen'] for paso in pasos if paso.get('imagen')]
-                
-                soluciones.append({
-                    'id': solucion[0],
-                    'titulo': solucion[1],
-                    'categoria': solucion[2],
-                    'descripcion': solucion[3],
-                    'pasos': pasos,
-                    'imagenes': imagenes
-                })
-                
-    except Exception as e:
-        print(f"Error en api_soluciones_visuales: {e}")
-    finally:
-        if cursor is not None:
-            cursor.close()
-        if conexion is not None:
-            conexion.close()
-    
-    return jsonify(soluciones)
-
 # =============================================
-# RUTAS EXISTENTES (OPTIMIZADAS)
+# RUTAS DE AUTENTICACIÓN (MANTENER)
 # =============================================
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -539,10 +471,7 @@ def login():
                         user = User(user_dict['id'], user_dict['usuario'], user_dict['rol'], permisos)
                         login_user(user)
                         flash('¡Inicio de sesión exitoso!', 'success')
-                        
-                        # Redirigir a la página que intentaba acceder o al index
-                        next_page = request.args.get('next')
-                        return redirect(next_page or url_for('index'))
+                        return redirect(url_for('index'))
                     else:
                         flash('Usuario o contraseña incorrectos', 'error')
                 else:
@@ -1479,5 +1408,8 @@ def obtener_problemas(categoria):
 if __name__ == '__main__':
     with app.app_context():
         print("🚀 Iniciando aplicación Flask...")
+        print("📦 Creando tablas de base de datos...")
         crear_tablas()
+        print("✅ Aplicación lista")
+        print("📁 Estructura de imágenes: static/img/soluciones/")
     app.run(host='0.0.0.0', port=5000, debug=True)
