@@ -85,7 +85,7 @@ def crear_tablas():
         """)
         print("✅ Tabla 'usuarios' lista")
 
-        # Tabla fichas
+        # Tabla fichas (existente)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS fichas (
                 id SERIAL PRIMARY KEY,
@@ -101,6 +101,21 @@ def crear_tablas():
         """)
         print("✅ Tabla 'fichas' lista")
 
+        # NUEVA: Tabla para soluciones visuales
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS soluciones_visuales (
+                id SERIAL PRIMARY KEY,
+                titulo VARCHAR(255) NOT NULL,
+                categoria VARCHAR(50) NOT NULL,
+                descripcion TEXT,
+                pasos JSONB NOT NULL DEFAULT '[]',
+                estado VARCHAR(20) DEFAULT 'activo',
+                fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        print("✅ Tabla 'soluciones_visuales' lista")
+
         # Insertar usuarios si no existen
         usuarios_data = [
             ('admin', generate_password_hash('admin123'), 'admin'),
@@ -115,13 +130,51 @@ def crear_tablas():
                     'agregar_fichas': rol == 'admin',
                     'editar_fichas': rol == 'admin', 
                     'eliminar_fichas': rol == 'admin',
-                    'cambiar_password': True
+                    'cambiar_password': True,
+                    'gestion_soluciones_visuales': rol == 'admin'  # NUEVO PERMISO
                 })
                 cursor.execute(
                     "INSERT INTO usuarios (usuario, password, rol, permisos) VALUES (%s, %s, %s, %s)",
                     (usuario, password, rol, permisos)
                 )
                 print(f"✅ Usuario '{usuario}' creado")
+
+        # Insertar algunas soluciones visuales de ejemplo
+        cursor.execute("SELECT COUNT(*) FROM soluciones_visuales")
+        if cursor.fetchone()[0] == 0:
+            soluciones_ejemplo = [
+                {
+                    'titulo': 'Consultar cliente en Softv',
+                    'categoria': 'Softv',
+                    'descripcion': 'Guía paso a paso para consultar información de clientes en la plataforma Softv',
+                    'pasos': json.dumps([
+                        {
+                            'titulo': 'Paso 1: Ingresar a Softv y acceder al menú lateral',
+                            'descripcion': 'Dentro de la plataforma Softv, ubique el menú desplegable lateral y seleccione la opción **Facturación** para continuar con el proceso.',
+                            'imagen': 'softv/softv1.png'
+                        }
+                    ])
+                },
+                {
+                    'titulo': '¿Como validar puertos en uso y la MAC del equipo?',
+                    'categoria': 'Vortex',
+                    'descripcion': 'Procedimiento para validar puertos LAN y dirección MAC en dispositivos Vortex',
+                    'pasos': json.dumps([
+                        {
+                            'titulo': 'Paso 1: Obtener el estado del dispositivo',
+                            'descripcion': 'Haga clic en el botón **Get Status** para que el sistema consulte la información actual del dispositivo.',
+                            'imagen': 'vortex/vortex4.png'
+                        }
+                    ])
+                }
+            ]
+            
+            for solucion in soluciones_ejemplo:
+                cursor.execute(
+                    "INSERT INTO soluciones_visuales (titulo, categoria, descripcion, pasos) VALUES (%s, %s, %s, %s)",
+                    (solucion['titulo'], solucion['categoria'], solucion['descripcion'], solucion['pasos'])
+                )
+            print("✅ Soluciones visuales de ejemplo creadas")
 
         conexion.commit()
         print("🎉 Base de datos inicializada CORRECTAMENTE")
@@ -175,10 +228,21 @@ def verificar_tablas():
         """)
         fichas_existe = cursor.fetchone()[0]
         
+        # Verificar tabla soluciones_visuales
+        cursor.execute("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name = 'soluciones_visuales'
+            )
+        """)
+        soluciones_existe = cursor.fetchone()[0]
+        
         print(f"📊 Tabla 'usuarios' existe: {usuarios_existe}")
         print(f"📊 Tabla 'fichas' existe: {fichas_existe}")
+        print(f"📊 Tabla 'soluciones_visuales' existe: {soluciones_existe}")
         
-        return usuarios_existe and fichas_existe
+        return usuarios_existe and fichas_existe and soluciones_existe
         
     except Exception as err:
         print(f"💥 Error verificando tablas: {err}")
@@ -202,7 +266,3 @@ if __name__ == "__main__":
             print("🎉 Inicialización completada exitosamente!")
         else:
             print("💥 Falló la inicialización de la base de datos")
-
-if __name__ == "__main__":
-    print("🔧 Ejecutando inicialización de base de datos...")
-    crear_tablas()
