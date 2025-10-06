@@ -354,6 +354,12 @@
                             <span class="btn-text">Información</span>
                         </a>
 
+                        <!-- === BOTÓN PDF AGREGADO AQUÍ === -->
+                        <a class="nav-btn primary" href="/assets/documentos/politicas-seguridad-crm-softv.pdf" target="_blank">
+                            <i class="fas fa-file-pdf"></i>
+                            <span class="btn-text">Políticas PDF</span>
+                        </a>
+
                         <!-- Menú desplegable para elementos adicionales -->
                         <div class="dropdown more-menu">
                             <button class="nav-btn secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
@@ -370,11 +376,6 @@
                                 <li>
                                     <a class="dropdown-item" href="{{ url_for('agregar_ficha') }}">
                                         <i class="fas fa-plus me-2"></i>Agregar Ficha
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" href="{{ url_for('politicas_seguridad') }}">
-                                        <i class="fas fa-shield-alt me-2"></i>Políticas de Seguridad CRM
                                     </a>
                                 </li>
                                 {% endif %}
@@ -571,4 +572,3 @@
     </script>
 </body>
 </html>
-
