@@ -930,10 +930,6 @@ def agregar_ficha():
         print(f"📝 DATOS DEL FORMULARIO:")
         print(f"   Categoría: {categoria}")
         print(f"   Problema: {problema}")
-        print(f"   Descripción: {descripcion}")
-        print(f"   Causas: {causas}")
-        print(f"   Solución: {solucion}")
-        print(f"   Palabras clave: {palabras_clave}")
         
         # Validar campos requeridos
         campos_requeridos = {
@@ -970,6 +966,21 @@ def agregar_ficha():
             else:
                 print("❌ No hay conexión a la base de datos")
                 flash('Error de conexión a la base de datos', 'error')
+                
+        except psycopg2.IntegrityError as e:
+            # ERROR ESPECÍFICO: duplicate key - problema de secuencia
+            print(f"❌ ERROR DE INTEGRIDAD (secuencia): {str(e)}")
+            flash('Error en la base de datos: problema con IDs. Por favor, contacte al administrador.', 'error')
+            if conexion:
+                conexion.rollback()
+                
+            # Intentar resetear la secuencia automáticamente
+            try:
+                from database import resetear_secuencias
+                resetear_secuencias()
+                print("🔄 Secuencia reseteada automáticamente")
+            except:
+                print("⚠️ No se pudo resetear la secuencia automáticamente")
                 
         except Exception as e:
             print(f"❌ ERROR en base de datos: {str(e)}")
