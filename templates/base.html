@@ -343,12 +343,30 @@
                             <span class="btn-text">Inicio</span>
                         </a>
 
-                        <a class="nav-btn secondary" href="{{ url_for('soluciones_visuales') }}">
-                            <i class="fas fa-images"></i>
-                            <span class="btn-text">Soluciones</span>
-                        </a>
-
                         <!-- Información General - Agregado aquí -->
+                        <div class="dropdown more-menu">
+                            
+                         <button class="nav-btn secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-imagenes"></i>
+                                <span class="btn-text">Soluciones visuales</span>
+                            </button>
+                        <ul class="dropdown-menu">
+                            <li>
+                                  <a class="dropdown-item" href="{{ url_for('soluciones_visuales') }}">
+                                    <i class="fas fa-images"></i>
+                                    <span class="btn-text">Soluciones</span>
+                                </a>
+                            </li>    
+                                {% if tiene_permiso('gestion_soluciones_visuales') %}
+                                  <li >
+                                      <a class="dropdown-item" href="{{ url_for('gestion_soluciones') }}">
+                                          <i class="fas fa-tasks me-2"></i>Gestión Soluciones
+                                      </a>
+                                  </li>
+                                  {% endif %}
+                            </ul>
+                            
+                        </div>
                         <a class="nav-btn secondary {% if request.endpoint == 'informacion_general' %}active{% endif %}" href="{{ url_for('informacion_general') }}">
                             <i class="fas fa-info-circle"></i>
                             <span class="btn-text">Información</span>
@@ -380,13 +398,6 @@
                                     </a>
                                 </li>
                                 {% endif %}
-                                {% if tiene_permiso('gestion_soluciones_visuales') %}
-                                  <li class="nav-item">
-                                      <a class="nav-link" href="{{ url_for('gestion_soluciones') }}">
-                                          <i class="fas fa-tasks me-2"></i>Gestión Soluciones
-                                      </a>
-                                  </li>
-                                  {% endif %}
                             </ul>
                         </div>
 
@@ -574,3 +585,4 @@
 </body>
 
 </html>
+
