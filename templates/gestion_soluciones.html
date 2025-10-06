@@ -52,76 +52,131 @@
         </div>
     </div>
 
-    <!-- Tabla de soluciones -->
-    <div class="row">
+    <!-- Filtros Corporativos -->
+    <div class="row mb-4">
         <div class="col-12">
-            <div class="corporate-card">
-                <div class="card-content">
-                    <div class="table-responsive">
-                        <table class="table table-hover corporate-table">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Título</th>
-                                    <th>Categoría</th>
-                                    <th>Pasos</th>
-                                    <th>Fecha Creación</th>
-                                    <th>Estado</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for solucion in soluciones %}
-                                <tr>
-                                    <td>{{ solucion.id }}</td>
-                                    <td>
-                                        <strong>{{ solucion.titulo }}</strong>
-                                        <br><small class="text-muted">{{ solucion.descripcion[:60] }}...</small>
-                                    </td>
-                                    <td>
-                                        <span class="service-tag {% if solucion.categoria == 'Vortex' %}vortex-tag{% else %}softv-tag{% endif %}">
-                                            {{ solucion.categoria }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-secondary">{{ solucion.pasos|length }} pasos</span>
-                                    </td>
-                                    <td>{{ solucion.fecha_creacion.strftime('%d/%m/%Y') }}</td>
-                                    <td>
-                                        <span class="badge-estado {% if solucion.estado == 'activo' %}badge-activo{% else %}badge-inactivo{% endif %}">
-                                            {{ solucion.estado }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div class="d-flex gap-1">
-                                            <a href="{{ url_for('editar_solucion', id=solucion.id) }}" class="btn btn-action btn-edit">
-                                                <i class="fas fa-edit"></i>
-                                            </a>
-                                            <a href="{{ url_for('eliminar_solucion', id=solucion.id) }}" class="btn btn-action btn-delete" onclick="return confirm('¿Está seguro de eliminar esta solución?')">
-                                                <i class="fas fa-trash"></i>
-                                            </a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% else %}
-                                <tr>
-                                    <td colspan="7" class="text-center py-4">
-                                        <div class="empty-state-corporate">
-                                            <div class="empty-icon-corporate mb-3">
-                                                <i class="fas fa-file-alt"></i>
-                                            </div>
-                                            <h5 class="empty-title mb-2">No hay soluciones creadas</h5>
-                                            <p class="empty-description">Comienza creando tu primera solución visual</p>
-                                            <a href="{{ url_for('agregar_solucion') }}" class="btn corporate-btn">
-                                                <i class="fas fa-plus me-2"></i>Crear Primera Solución
-                                            </a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+            <div class="corporate-filters">
+                <div class="filter-header">
+                    <i class="fas fa-filter me-2"></i>
+                    Filtrar por servicio
+                </div>
+                <div class="filter-buttons">
+                    <button class="btn filter-btn corporate-filter active" data-service="all">
+                        <i class="fas fa-layer-group me-2"></i>Todas las Soluciones
+                    </button>
+                    <button class="btn filter-btn corporate-filter vortex-filter" data-service="Vortex">
+                        <i class="fas fa-satellite-dish me-2"></i>Servicios Vortex
+                    </button>
+                    <button class="btn filter-btn corporate-filter softv-filter" data-service="Softv">
+                        <i class="fas fa-tv me-2"></i>Servicios Softv
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grid de Soluciones Mejorado -->
+    <div class="row g-4" id="solucionesGrid">
+        {% for solucion in soluciones %}
+        <div class="col-xl-4 col-lg-6 col-md-6 solution-item" data-service="{{ solucion.categoria }}">
+            <div class="corporate-card solution-card h-100">
+                <div class="card-image-container">
+                    {% if solucion.imagen_principal %}
+                    <img src="{{ url_for('static', filename='img/soluciones/' + solucion.imagen_principal) }}" 
+                         class="card-image" 
+                         alt="{{ solucion.titulo }}"
+                         loading="lazy">
+                    {% else %}
+                    <div class="card-image-placeholder">
+                        <i class="fas fa-images"></i>
+                        <span>Sin imagen principal</span>
                     </div>
+                    {% endif %}
+                    <div class="card-badge {% if solucion.categoria == 'Vortex' %}vortex-badge{% else %}softv-badge{% endif %}">
+                        <i class="fas {% if solucion.categoria == 'Vortex' %}fa-satellite-dish{% else %}fa-tv{% endif %} me-1"></i>
+                        {{ solucion.categoria }}
+                    </div>
+                    <div class="card-overlay">
+                        <div class="overlay-content">
+                            <span class="steps-indicator">
+                                <i class="fas fa-images me-1"></i>
+                                {{ solucion.pasos|length }} pasos
+                            </span>
+                            <div class="d-flex gap-2">
+                                <a href="{{ url_for('ver_solucion', id=solucion.id) }}" class="btn view-btn">
+                                    <i class="fas fa-eye me-1"></i>Ver
+                                </a>
+                                <a href="{{ url_for('editar_solucion', id=solucion.id) }}" class="btn view-btn">
+                                    <i class="fas fa-edit me-1"></i>Editar
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <h5 class="card-title">{{ solucion.titulo }}</h5>
+                    <p class="card-description">{{ solucion.descripcion[:100] }}{% if solucion.descripcion|length > 100 %}...{% endif %}</p>
+                    <div class="card-footer">
+                        <div class="service-tag {% if solucion.categoria == 'Vortex' %}vortex-tag{% else %}softv-tag{% endif %}">
+                            <i class="fas {% if solucion.categoria == 'Vortex' %}fa-bolt{% else %}fa-play-circle{% endif %} me-1"></i>
+                            {{ solucion.categoria }}
+                        </div>
+                        <div class="action-buttons">
+                            <span class="badge-estado {% if solucion.estado == 'activo' %}badge-activo{% else %}badge-inactivo{% endif %}">
+                                {{ solucion.estado }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-12">
+            <div class="empty-state-corporate text-center py-5">
+                <div class="empty-icon-corporate mb-4">
+                    <i class="fas fa-file-alt"></i>
+                </div>
+                <h4 class="empty-title mb-3">No hay soluciones creadas</h4>
+                <p class="empty-description mb-4">Comienza creando tu primera solución visual</p>
+                <a href="{{ url_for('agregar_solucion') }}" class="btn corporate-btn">
+                    <i class="fas fa-plus me-2"></i>Crear Primera Solución
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Modal para Vista Previa -->
+<div class="modal fade" id="previewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content corporate-modal">
+            <div class="modal-header corporate-modal-header">
+                <div class="modal-title-content">
+                    <h5 class="modal-title">Vista Previa de Solución</h5>
+                    <div class="modal-subtitle" id="previewSubtitle"></div>
+                </div>
+                <button type="button" class="btn-close btn-close-corporate" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="previewCarousel" class="carousel slide corporate-carousel" data-bs-ride="false">
+                    <div class="carousel-indicators corporate-indicators" id="previewIndicators"></div>
+                    <div class="carousel-inner corporate-carousel-inner" id="previewInner"></div>
+                    <button class="carousel-control-prev corporate-control" type="button" data-bs-target="#previewCarousel" data-bs-slide="prev">
+                        <span class="carousel-control-prev-icon corporate-control-icon"></span>
+                        <span class="visually-hidden">Anterior</span>
+                    </button>
+                    <button class="carousel-control-next corporate-control" type="button" data-bs-target="#previewCarousel" data-bs-slide="next">
+                        <span class="carousel-control-next-icon corporate-control-icon"></span>
+                        <span class="visually-hidden">Siguiente</span>
+                    </button>
+                </div>
+                <div class="step-info-corporate">
+                    <div class="step-header">
+                        <h6 id="previewStepTitle" class="step-title"></h6>
+                        <div class="step-counter" id="previewStepCounter">Paso 1 de 1</div>
+                    </div>
+                    <p id="previewStepDescription" class="step-description"></p>
                 </div>
             </div>
         </div>
@@ -129,12 +184,47 @@
 </div>
 
 <style>
+/* Estilos específicos para gestión */
 .section-title {
     color: var(--corporate-blue);
     font-weight: 700;
     margin-bottom: 0;
 }
 
+.card-image-placeholder {
+    width: 100%;
+    height: 100%;
+    background: var(--corporate-gray-light);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--corporate-gray);
+}
+
+.card-image-placeholder i {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.badge-estado {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.badge-activo {
+    background: var(--corporate-blue-light);
+    color: var(--corporate-blue);
+}
+
+.badge-inactivo {
+    background: var(--corporate-red-light);
+    color: var(--corporate-red);
+}
+
+/* Asegurar que los estilos corporativos se apliquen */
 .corporate-table {
     width: 100%;
     border-collapse: separate;
@@ -157,23 +247,6 @@
 
 .corporate-table tbody tr:hover {
     background: var(--corporate-blue-light);
-}
-
-.badge-estado {
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
-    font-size: 0.8rem;
-    font-weight: 600;
-}
-
-.badge-activo {
-    background: var(--corporate-blue-light);
-    color: var(--corporate-blue);
-}
-
-.badge-inactivo {
-    background: var(--corporate-red-light);
-    color: var(--corporate-red);
 }
 
 .btn-action {
@@ -204,4 +277,128 @@
     color: var(--corporate-white);
 }
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Filtrado por servicio
+    const serviceFilters = document.querySelectorAll('.corporate-filter');
+    const solutionItems = document.querySelectorAll('.solution-item');
+    
+    serviceFilters.forEach(filter => {
+        filter.addEventListener('click', function() {
+            const service = this.getAttribute('data-service');
+            
+            // Actualizar filtros activos
+            serviceFilters.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Filtrar soluciones
+            solutionItems.forEach(item => {
+                const itemService = item.getAttribute('data-service');
+                
+                if (service === 'all' || itemService === service) {
+                    item.style.display = 'block';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        });
+    });
+    
+    // Vista previa de soluciones
+    const previewModal = new bootstrap.Modal(document.getElementById('previewModal'));
+    
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('view-solution') || e.target.closest('.view-solution')) {
+            const button = e.target.classList.contains('view-solution') ? e.target : e.target.closest('.view-solution');
+            const solutionId = button.getAttribute('data-solution-id');
+            loadSolutionPreview(solutionId);
+        }
+    });
+    
+    function loadSolutionPreview(solutionId) {
+        // En una implementación real, esto cargaría datos del servidor
+        // Por ahora simulamos con datos de ejemplo
+        const solutionData = {
+            titulo: 'Solución de Ejemplo',
+            servicio: 'Vortex',
+            pasos: [
+                {
+                    imagen: 'vortex/vortex1.png',
+                    titulo: 'Paso 1: Acceder al sistema',
+                    descripcion: 'Primer paso para resolver el problema'
+                },
+                {
+                    imagen: 'vortex/vortex2.png',
+                    titulo: 'Paso 2: Configurar parámetros',
+                    descripcion: 'Segundo paso con configuración necesaria'
+                }
+            ]
+        };
+        
+        // Configurar modal
+        document.getElementById('previewSubtitle').textContent = `${solutionData.servicio} - ${solutionData.pasos.length} pasos`;
+        
+        // Construir carousel
+        const carouselInner = document.getElementById('previewInner');
+        const carouselIndicators = document.getElementById('previewIndicators');
+        
+        carouselInner.innerHTML = '';
+        carouselIndicators.innerHTML = '';
+        
+        solutionData.pasos.forEach((paso, index) => {
+            // Crear indicador
+            const indicator = document.createElement('button');
+            indicator.type = 'button';
+            indicator.setAttribute('data-bs-target', '#previewCarousel');
+            indicator.setAttribute('data-bs-slide-to', index.toString());
+            indicator.setAttribute('aria-label', `Paso ${index + 1}`);
+            if (index === 0) {
+                indicator.classList.add('active');
+                indicator.setAttribute('aria-current', 'true');
+            }
+            carouselIndicators.appendChild(indicator);
+            
+            // Crear item del carousel
+            const carouselItem = document.createElement('div');
+            carouselItem.className = `carousel-item ${index === 0 ? 'active' : ''}`;
+            
+            carouselItem.innerHTML = `
+                <div class="carousel-image-container">
+                    <img src="/static/img/soluciones/${paso.imagen}" 
+                         class="carousel-image" 
+                         alt="${paso.titulo}"
+                         loading="lazy"
+                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="image-fallback" style="display: none;">
+                        <i class="fas fa-image fa-3x mb-3"></i>
+                        <p>Imagen no disponible</p>
+                    </div>
+                </div>
+            `;
+            carouselInner.appendChild(carouselItem);
+        });
+        
+        // Actualizar información del primer paso
+        if (solutionData.pasos.length > 0) {
+            updatePreviewStepInfo(0, solutionData.pasos[0], solutionData.pasos.length);
+        }
+        
+        // Configurar event listener del carousel
+        document.getElementById('previewCarousel').addEventListener('slid.bs.carousel', function(event) {
+            const activeIndex = event.to;
+            updatePreviewStepInfo(activeIndex, solutionData.pasos[activeIndex], solutionData.pasos.length);
+        });
+        
+        // Mostrar modal
+        previewModal.show();
+    }
+    
+    function updatePreviewStepInfo(index, paso, totalSteps) {
+        document.getElementById('previewStepTitle').textContent = paso.titulo;
+        document.getElementById('previewStepDescription').textContent = paso.descripcion;
+        document.getElementById('previewStepCounter').textContent = `Paso ${index + 1} de ${totalSteps}`;
+    }
+});
+</script>
 {% endblock %}
