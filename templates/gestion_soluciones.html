@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+
+{% block title %}Gestión de Soluciones Visuales{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header Corporativo -->
+    <div class="corporate-header mb-5">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <div class="d-flex align-items-center">
+                    <div class="header-icon-wrapper me-4">
+                        <div class="corporate-icon">
+                            <i class="fas fa-tasks"></i>
+                        </div>
+                    </div>
+                    <div class="flex-grow-1">
+                        <h1 class="corporate-title mb-2">
+                            Gestión de Soluciones Visuales
+                        </h1>
+                        <p class="corporate-subtitle mb-0">
+                            <i class="fas fa-cogs me-2"></i>
+                            Administra las soluciones paso a paso para Vortex y Softv
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="corporate-stats">
+                    <div class="stat-item vortex-stat">
+                        <div class="stat-number">{{ soluciones|length }}</div>
+                        <div class="stat-label">Total Soluciones</div>
+                    </div>
+                    <div class="stat-item softv-stat">
+                        <div class="stat-number">{{ soluciones|selectattr('estado', 'equalto', 'activo')|list|length }}</div>
+                        <div class="stat-label">Activas</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Botón para agregar nueva solución -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h3 class="section-title">Soluciones Existentes</h3>
+                <a href="{{ url_for('agregar_solucion') }}" class="btn corporate-btn">
+                    <i class="fas fa-plus me-2"></i>Nueva Solución
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla de soluciones -->
+    <div class="row">
+        <div class="col-12">
+            <div class="corporate-card">
+                <div class="card-content">
+                    <div class="table-responsive">
+                        <table class="table table-hover corporate-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Título</th>
+                                    <th>Categoría</th>
+                                    <th>Pasos</th>
+                                    <th>Fecha Creación</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for solucion in soluciones %}
+                                <tr>
+                                    <td>{{ solucion.id }}</td>
+                                    <td>
+                                        <strong>{{ solucion.titulo }}</strong>
+                                        <br><small class="text-muted">{{ solucion.descripcion[:60] }}...</small>
+                                    </td>
+                                    <td>
+                                        <span class="service-tag {% if solucion.categoria == 'Vortex' %}vortex-tag{% else %}softv-tag{% endif %}">
+                                            {{ solucion.categoria }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ solucion.pasos|length }} pasos</span>
+                                    </td>
+                                    <td>{{ solucion.fecha_creacion.strftime('%d/%m/%Y') }}</td>
+                                    <td>
+                                        <span class="badge-estado {% if solucion.estado == 'activo' %}badge-activo{% else %}badge-inactivo{% endif %}">
+                                            {{ solucion.estado }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex gap-1">
+                                            <a href="{{ url_for('editar_solucion', id=solucion.id) }}" class="btn btn-action btn-edit">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a href="{{ url_for('eliminar_solucion', id=solucion.id) }}" class="btn btn-action btn-delete" onclick="return confirm('¿Está seguro de eliminar esta solución?')">
+                                                <i class="fas fa-trash"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="7" class="text-center py-4">
+                                        <div class="empty-state-corporate">
+                                            <div class="empty-icon-corporate mb-3">
+                                                <i class="fas fa-file-alt"></i>
+                                            </div>
+                                            <h5 class="empty-title mb-2">No hay soluciones creadas</h5>
+                                            <p class="empty-description">Comienza creando tu primera solución visual</p>
+                                            <a href="{{ url_for('agregar_solucion') }}" class="btn corporate-btn">
+                                                <i class="fas fa-plus me-2"></i>Crear Primera Solución
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.section-title {
+    color: var(--corporate-blue);
+    font-weight: 700;
+    margin-bottom: 0;
+}
+
+.corporate-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.corporate-table th {
+    background: var(--corporate-blue-light);
+    color: var(--corporate-blue);
+    font-weight: 600;
+    padding: 1rem;
+    border-bottom: 2px solid var(--corporate-blue);
+}
+
+.corporate-table td {
+    padding: 1rem;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--corporate-blue-light);
+}
+
+.corporate-table tbody tr:hover {
+    background: var(--corporate-blue-light);
+}
+
+.badge-estado {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.badge-activo {
+    background: var(--corporate-blue-light);
+    color: var(--corporate-blue);
+}
+
+.badge-inactivo {
+    background: var(--corporate-red-light);
+    color: var(--corporate-red);
+}
+
+.btn-action {
+    padding: 0.25rem 0.5rem;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    transition: all 0.3s ease;
+}
+
+.btn-edit {
+    background: var(--corporate-blue-light);
+    color: var(--corporate-blue);
+}
+
+.btn-edit:hover {
+    background: var(--corporate-blue);
+    color: var(--corporate-white);
+}
+
+.btn-delete {
+    background: var(--corporate-red-light);
+    color: var(--corporate-red);
+}
+
+.btn-delete:hover {
+    background: var(--corporate-red);
+    color: var(--corporate-white);
+}
+</style>
+{% endblock %}
