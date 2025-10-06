@@ -609,6 +609,11 @@ def index():
     
     return render_template('index.html', fichas=fichas, user=current_user)
 
+@app.route('/atencion_telefonica')
+@login_required
+def atencion_telefonica():
+    return render_template('atencion_telefonica.html')
+
 @app.route('/informacion-general')
 @login_required
 def informacion_general():
@@ -887,13 +892,6 @@ def informacion_general():
     }
     
     return render_template('informacion_general.html', informacion=informacion)
-
-@app.route('/logout')
-@login_required
-def logout():
-    logout_user()
-    flash('Sesión cerrada correctamente', 'info')
-    return redirect(url_for('login'))
 
 # Ruta para cambiar contraseña (todos los usuarios)
 @app.route('/cambiar_password', methods=['GET', 'POST'])
@@ -1186,51 +1184,6 @@ def eliminar_usuario(id):
             conexion.close()
     
     return redirect(url_for('gestion_usuarios'))
-
-# Rutas principales
-@app.route('/')
-@login_required
-def index():
-    if not current_user.puede('ver_fichas'):
-        flash('No tienes permisos para ver las fichas', 'error')
-        return redirect(url_for('login'))
-    
-    cursor = None
-    conexion = None
-    fichas = []
-    
-    try:
-        conexion = crear_conexion()
-        if conexion:
-            cursor = conexion.cursor()
-            cursor.execute("SELECT * FROM fichas ORDER BY fecha_actualizacion DESC")
-            fichas_data = cursor.fetchall()
-            
-            # Convertir tuplas a diccionarios
-            for ficha in fichas_data:
-                ficha_dict = {
-                    'id': ficha[0],
-                    'categoria': ficha[1],
-                    'problema': ficha[2],
-                    'descripcion': ficha[3],
-                    'causas': ficha[4],
-                    'solucion': ficha[5],
-                    'palabras_clave': ficha[6],
-                    'fecha_creacion': ficha[7],
-                    'fecha_actualizacion': ficha[8]
-                }
-                fichas.append(ficha_dict)
-                
-    except Exception as e:
-        flash('Error al cargar las fichas', 'error')
-        print(f"Error en index: {e}")
-    finally:
-        if cursor is not None:
-            cursor.close()
-        if conexion is not None:
-            conexion.close()
-    
-    return render_template('index.html', fichas=fichas, user=current_user)
 
 @app.route('/agregar', methods=['GET', 'POST'])
 @login_required
