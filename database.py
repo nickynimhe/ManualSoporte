@@ -6,49 +6,66 @@ import json
 import time
 
 def crear_conexion():
-    """Usa EXACTAMENTE la misma lógica que get_db() de Flask"""
+    """Conexión mejorada con mejor manejo de errores"""
     max_intentos = 3
     for intento in range(max_intentos):
         try:
             print(f"🔗 Intento {intento + 1} de conexión a PostgreSQL...")
             
-            # CÓDIGO CORREGIDO - usar nombres de variables de entorno, no valores
+            # Opción 1: Usar DATABASE_URL si existe
             database_url = os.getenv('DATABASE_URL')
-            sslmode_require = os.getenv('SSL_MODE', '') == 'require'
-
-            if not database_url:
-                # Configuración local - usar nombres CORRECTOS de variables de entorno
+            
+            if database_url:
+                print("🔧 Usando DATABASE_URL de variable de entorno")
+                if database_url.startswith("postgres://"):
+                    database_url = database_url.replace("postgres://", "postgresql://", 1)
+                
+                # Agregar sslmode si es necesario para Render
+                if 'render.com' in database_url and 'sslmode=' not in database_url:
+                    database_url += '?sslmode=require'
+                    
+                print(f"🔗 URL: {database_url.split('@')[0]}@***")
+                conexion = psycopg2.connect(database_url)
+                
+            else:
+                # Opción 2: Usar variables individuales
                 user = os.getenv('DB_USER', 'soporte_tecnico_9sad_user')
                 password = os.getenv('DB_PASSWORD', 'T56GYS30j5w4k6zrdlvAh1GfExjT0t7a')
                 host = os.getenv('DB_HOST', 'dpg-d3g1q2nqaa0ldt0j7vug-a.oregon-postgres.render.com')
                 port = os.getenv('DB_PORT', '5432')
                 dbname = os.getenv('DB_NAME', 'soporte_tecnico_9sad')
                 
-                print(f"🔧 Configuración local - Host: {host}, DB: {dbname}, User: {user}")
+                print(f"🔧 Configuración: host={host}, db={dbname}, user={user}")
                 
-                # Codifica la contraseña por si tiene caracteres especiales
-                password_encoded = quote_plus(password)
-                database_url = f"postgresql://{user}:{password_encoded}@{host}:{port}/{dbname}"
-            else:
-                print("🔧 Usando DATABASE_URL de variable de entorno")
-                if database_url.startswith("postgres://"):
-                    database_url = database_url.replace("postgres://", "postgresql://", 1)
+                # Para Render, usar sslmode=require
+                if 'render.com' in host:
+                    conexion = psycopg2.connect(
+                        host=host,
+                        database=dbname,
+                        user=user,
+                        password=password,
+                        port=port,
+                        sslmode='require'
+                    )
+                else:
+                    conexion = psycopg2.connect(
+                        host=host,
+                        database=dbname,
+                        user=user,
+                        password=password,
+                        port=port
+                    )
             
-            # Agrega sslmode=require al URI si es necesario
-            if sslmode_require and 'sslmode=' not in database_url:
-                separator = '?' if '?' not in database_url else '&'
-                database_url += f"{separator}sslmode=require"
-
-            print(f"🔗 URL de conexión: {database_url.split('@')[0]}@***")  # Oculta credenciales en logs
-
-            # Conexión SOLO con el URI (igual que en Flask)
-            conexion = psycopg2.connect(database_url)
+            # Verificar que la conexión funciona
+            cursor = conexion.cursor()
+            cursor.execute("SELECT 1")
+            cursor.close()
             
             print("✅ ¡CONEXIÓN EXITOSA a PostgreSQL!")
             return conexion
             
         except Exception as err:
-            print(f"❌ Intento {intento + 1} falló: {err}")
+            print(f"❌ Intento {intento + 1} falló: {str(err)}")
             if intento < max_intentos - 1:
                 print("🔄 Reintentando en 3 segundos...")
                 time.sleep(3)
@@ -57,7 +74,7 @@ def crear_conexion():
                 return None
 
 def crear_tablas():
-    """Función para crear tablas con manejo seguro de errores"""
+    """Función mejorada para crear tablas"""
     print("🔧 Iniciando creación de tablas...")
     
     conexion = None
@@ -89,11 +106,11 @@ def crear_tablas():
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS fichas (
                 id SERIAL PRIMARY KEY,
-                categoria VARCHAR(50) NOT NULL DEFAULT 'Equipo',
+                categoria VARCHAR(50) NOT NULL,
                 problema VARCHAR(255) NOT NULL,
                 descripcion TEXT,
                 causas TEXT,
-                solucion TEXT,
+                solucion TEXT NOT NULL,
                 palabras_clave TEXT,
                 fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -101,78 +118,57 @@ def crear_tablas():
         """)
         print("✅ Tabla 'fichas' lista")
 
-        # Insertar usuarios si no existen
-        usuarios_data = [
-            ('admin', generate_password_hash('admin123'), 'admin'),
-            ('asesor', generate_password_hash('asesor123'), 'asesor')
-        ]
-        
-        for usuario, password, rol in usuarios_data:
-            cursor.execute("SELECT COUNT(*) FROM usuarios WHERE usuario = %s", (usuario,))
-            if cursor.fetchone()[0] == 0:
-                permisos = json.dumps({
-                    'ver_fichas': True, 
-                    'agregar_fichas': rol == 'admin',
-                    'editar_fichas': rol == 'admin', 
-                    'eliminar_fichas': rol == 'admin',
-                    'cambiar_password': True
-                })
-                cursor.execute(
-                    "INSERT INTO usuarios (usuario, password, rol, permisos) VALUES (%s, %s, %s, %s)",
-                    (usuario, password, rol, permisos)
-                )
-                print(f"✅ Usuario '{usuario}' creado")
+        # Insertar usuario admin por defecto
+        cursor.execute("SELECT COUNT(*) FROM usuarios WHERE usuario = 'admin'")
+        if cursor.fetchone()[0] == 0:
+            password_hash = generate_password_hash('admin123')
+            permisos_admin = json.dumps({
+                'ver_fichas': True, 
+                'agregar_fichas': True,
+                'editar_fichas': True, 
+                'eliminar_fichas': True,
+                'cambiar_password': True
+            })
+            cursor.execute(
+                "INSERT INTO usuarios (usuario, password, rol, permisos) VALUES (%s, %s, %s, %s)",
+                ('admin', password_hash, 'admin', permisos_admin)
+            )
+            print("✅ Usuario 'admin' creado (password: admin123)")
 
         conexion.commit()
         print("🎉 Base de datos inicializada CORRECTAMENTE")
         return True
 
     except Exception as err:
-        print(f"💥 Error en creación de tablas: {err}")
+        print(f"💥 Error en creación de tablas: {str(err)}")
         if conexion:
             conexion.rollback()
         return False
         
     finally:
-        # ✅ MANEJO SEGURO - verificar antes de cerrar
-        if cursor is not None:
+        if cursor:
             cursor.close()
-            print("🔒 Cursor cerrado")
-        if conexion is not None:
+        if conexion:
             conexion.close()
-            print("🔒 Conexión cerrada")
 
 def verificar_tablas():
-    """Función para verificar que las tablas existen"""
+    """Verificar que las tablas existen"""
     conexion = None
     cursor = None
     
     try:
         conexion = crear_conexion()
         if not conexion:
-            print("💥 No se pudo conectar para verificar tablas")
             return False
 
         cursor = conexion.cursor()
         
         # Verificar tabla usuarios
-        cursor.execute("""
-            SELECT EXISTS (
-                SELECT FROM information_schema.tables 
-                WHERE table_schema = 'public' 
-                AND table_name = 'usuarios'
-            )
-        """)
+        cursor.execute("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'usuarios')")
         usuarios_existe = cursor.fetchone()[0]
         
         # Verificar tabla fichas
-        cursor.execute("""
-            SELECT EXISTS (
-                SELECT FROM information_schema.tables 
-                WHERE table_schema = 'public' 
-                AND table_name = 'fichas'
-            )
-        """)
+        cursor.execute("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'fichas')")
         fichas_existe = cursor.fetchone()[0]
         
         print(f"📊 Tabla 'usuarios' existe: {usuarios_existe}")
@@ -185,24 +181,14 @@ def verificar_tablas():
         return False
         
     finally:
-        if cursor is not None:
+        if cursor:
             cursor.close()
-        if conexion is not None:
+        if conexion:
             conexion.close()
 
 if __name__ == "__main__":
-    print("🚀 Ejecutando inicialización de base de datos...")
-    
-    # Primero verificar si las tablas ya existen
-    if verificar_tablas():
-        print("✅ Las tablas ya existen. No es necesario crearlas.")
+    print("🚀 Inicializando base de datos...")
+    if crear_tablas():
+        print("🎉 ¡Base de datos lista!")
     else:
-        print("🔧 Creando tablas...")
-        if crear_tablas():
-            print("🎉 Inicialización completada exitosamente!")
-        else:
-            print("💥 Falló la inicialización de la base de datos")
-
-if __name__ == "__main__":
-    print("🔧 Ejecutando inicialización de base de datos...")
-    crear_tablas()
+        print("💥 Error inicializando base de datos")
