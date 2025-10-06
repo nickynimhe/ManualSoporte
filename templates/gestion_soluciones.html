@@ -81,17 +81,17 @@
         <div class="col-xl-4 col-lg-6 col-md-6 solution-item" data-service="{{ solucion.categoria }}">
             <div class="corporate-card solution-card h-100">
                 <div class="card-image-container">
-                    {% if solucion.imagen_principal %}
+                    {% if solucion.imagen_principal and solucion.imagen_principal != 'None' %}
                     <img src="{{ url_for('static', filename='img/soluciones/' + solucion.imagen_principal) }}" 
                          class="card-image" 
                          alt="{{ solucion.titulo }}"
-                         loading="lazy">
-                    {% else %}
-                    <div class="card-image-placeholder">
+                         loading="lazy"
+                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    {% endif %}
+                    <div class="card-image-placeholder {% if solucion.imagen_principal and solucion.imagen_principal != 'None' %}d-none{% endif %}">
                         <i class="fas fa-images"></i>
                         <span>Sin imagen principal</span>
                     </div>
-                    {% endif %}
                     <div class="card-badge {% if solucion.categoria == 'Vortex' %}vortex-badge{% else %}softv-badge{% endif %}">
                         <i class="fas {% if solucion.categoria == 'Vortex' %}fa-satellite-dish{% else %}fa-tv{% endif %} me-1"></i>
                         {{ solucion.categoria }}
@@ -100,12 +100,12 @@
                         <div class="overlay-content">
                             <span class="steps-indicator">
                                 <i class="fas fa-images me-1"></i>
-                                {{ solucion.pasos|length }} pasos
+                                {{ solucion.pasos|length if solucion.pasos else 0 }} pasos
                             </span>
                             <div class="d-flex gap-2">
-                                <a href="{{ url_for('ver_solucion', id=solucion.id) }}" class="btn view-btn">
-                                    <i class="fas fa-eye me-1"></i>Ver
-                                </a>
+                                <button class="btn view-btn view-solution" data-solution-id="{{ solucion.id }}">
+                                    <i class="fas fa-eye me-1"></i>Vista Previa
+                                </button>
                                 <a href="{{ url_for('editar_solucion', id=solucion.id) }}" class="btn view-btn">
                                     <i class="fas fa-edit me-1"></i>Editar
                                 </a>
@@ -153,7 +153,7 @@
         <div class="modal-content corporate-modal">
             <div class="modal-header corporate-modal-header">
                 <div class="modal-title-content">
-                    <h5 class="modal-title">Vista Previa de Solución</h5>
+                    <h5 class="modal-title" id="previewModalTitle">Vista Previa de Solución</h5>
                     <div class="modal-subtitle" id="previewSubtitle"></div>
                 </div>
                 <button type="button" class="btn-close btn-close-corporate" data-bs-dismiss="modal"></button>
@@ -189,6 +189,13 @@
     color: var(--corporate-blue);
     font-weight: 700;
     margin-bottom: 0;
+}
+
+.card-image-container {
+    position: relative;
+    height: 220px;
+    overflow: hidden;
+    background: var(--corporate-gray-light);
 }
 
 .card-image-placeholder {
@@ -276,9 +283,57 @@
     background: var(--corporate-red);
     color: var(--corporate-white);
 }
+
+/* Estilos para el carousel en el modal */
+.carousel-image-container {
+    position: relative;
+    height: 400px;
+    background: var(--corporate-gray-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.carousel-image {
+    max-height: 100%;
+    max-width: 100%;
+    object-fit: contain;
+    border-radius: 8px;
+}
+
+.image-fallback {
+    text-align: center;
+    color: var(--corporate-gray);
+    padding: 2rem;
+}
+
+.image-fallback i {
+    margin-bottom: 1rem;
+    color: var(--corporate-blue);
+}
 </style>
 
 <script>
+// Datos de ejemplo para las soluciones (en producción esto vendría del servidor)
+const SOLUTIONS_DATA = {
+    {% for solucion in soluciones %}
+    {{ solucion.id }}: {
+        titulo: "{{ solucion.titulo|escapejs }}",
+        servicio: "{{ solucion.categoria|escapejs }}",
+        pasos: [
+            {% for paso in solucion.pasos %}
+            {
+                imagen: "{{ paso.imagen|default('', true)|escapejs }}",
+                titulo: "{{ paso.titulo|escapejs }}",
+                descripcion: "{{ paso.descripcion|escapejs }}"
+            }{% if not loop.last %},{% endif %}
+            {% endfor %}
+        ]
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+};
+
 document.addEventListener('DOMContentLoaded', function() {
     // Filtrado por servicio
     const serviceFilters = document.querySelectorAll('.corporate-filter');
@@ -293,11 +348,13 @@ document.addEventListener('DOMContentLoaded', function() {
             this.classList.add('active');
             
             // Filtrar soluciones
+            let visibleCount = 0;
             solutionItems.forEach(item => {
                 const itemService = item.getAttribute('data-service');
                 
                 if (service === 'all' || itemService === service) {
                     item.style.display = 'block';
+                    visibleCount++;
                 } else {
                     item.style.display = 'none';
                 }
@@ -307,6 +364,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Vista previa de soluciones
     const previewModal = new bootstrap.Modal(document.getElementById('previewModal'));
+    let currentCarouselHandler = null;
     
     document.addEventListener('click', function(e) {
         if (e.target.classList.contains('view-solution') || e.target.closest('.view-solution')) {
@@ -317,35 +375,33 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     function loadSolutionPreview(solutionId) {
-        // En una implementación real, esto cargaría datos del servidor
-        // Por ahora simulamos con datos de ejemplo
-        const solutionData = {
-            titulo: 'Solución de Ejemplo',
-            servicio: 'Vortex',
-            pasos: [
-                {
-                    imagen: 'vortex/vortex1.png',
-                    titulo: 'Paso 1: Acceder al sistema',
-                    descripcion: 'Primer paso para resolver el problema'
-                },
-                {
-                    imagen: 'vortex/vortex2.png',
-                    titulo: 'Paso 2: Configurar parámetros',
-                    descripcion: 'Segundo paso con configuración necesaria'
-                }
-            ]
-        };
+        const solutionData = SOLUTIONS_DATA[solutionId];
+        
+        if (!solutionData || !solutionData.pasos || solutionData.pasos.length === 0) {
+            alert('Esta solución no tiene pasos configurados o está en desarrollo.');
+            return;
+        }
         
         // Configurar modal
+        document.getElementById('previewModalTitle').textContent = solutionData.titulo;
         document.getElementById('previewSubtitle').textContent = `${solutionData.servicio} - ${solutionData.pasos.length} pasos`;
         
         // Construir carousel
+        buildPreviewCarousel(solutionData);
+        
+        // Mostrar modal
+        previewModal.show();
+    }
+    
+    function buildPreviewCarousel(solutionData) {
         const carouselInner = document.getElementById('previewInner');
         const carouselIndicators = document.getElementById('previewIndicators');
         
+        // Limpiar contenido anterior
         carouselInner.innerHTML = '';
         carouselIndicators.innerHTML = '';
         
+        // Construir indicadores e imágenes
         solutionData.pasos.forEach((paso, index) => {
             // Crear indicador
             const indicator = document.createElement('button');
@@ -363,16 +419,24 @@ document.addEventListener('DOMContentLoaded', function() {
             const carouselItem = document.createElement('div');
             carouselItem.className = `carousel-item ${index === 0 ? 'active' : ''}`;
             
+            // Manejar imágenes - si no hay imagen, mostrar placeholder
+            const imagePath = paso.imagen && paso.imagen !== 'None' 
+                ? `/static/img/soluciones/${paso.imagen}`
+                : '';
+            
             carouselItem.innerHTML = `
                 <div class="carousel-image-container">
-                    <img src="/static/img/soluciones/${paso.imagen}" 
-                         class="carousel-image" 
-                         alt="${paso.titulo}"
-                         loading="lazy"
-                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                    <div class="image-fallback" style="display: none;">
+                    ${imagePath ? `
+                        <img src="${imagePath}" 
+                             class="carousel-image" 
+                             alt="${paso.titulo}"
+                             loading="lazy"
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    ` : ''}
+                    <div class="image-fallback ${imagePath ? 'd-none' : ''}">
                         <i class="fas fa-image fa-3x mb-3"></i>
                         <p>Imagen no disponible</p>
+                        <small class="text-muted">Paso ${index + 1}</small>
                     </div>
                 </div>
             `;
@@ -385,20 +449,34 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Configurar event listener del carousel
-        document.getElementById('previewCarousel').addEventListener('slid.bs.carousel', function(event) {
+        if (currentCarouselHandler) {
+            document.getElementById('previewCarousel').removeEventListener('slid.bs.carousel', currentCarouselHandler);
+        }
+        
+        currentCarouselHandler = function(event) {
             const activeIndex = event.to;
             updatePreviewStepInfo(activeIndex, solutionData.pasos[activeIndex], solutionData.pasos.length);
-        });
+        };
         
-        // Mostrar modal
-        previewModal.show();
+        document.getElementById('previewCarousel').addEventListener('slid.bs.carousel', currentCarouselHandler);
     }
     
     function updatePreviewStepInfo(index, paso, totalSteps) {
-        document.getElementById('previewStepTitle').textContent = paso.titulo;
-        document.getElementById('previewStepDescription').textContent = paso.descripcion;
+        document.getElementById('previewStepTitle').textContent = paso.titulo || `Paso ${index + 1}`;
+        document.getElementById('previewStepDescription').textContent = paso.descripcion || 'Descripción no disponible';
         document.getElementById('previewStepCounter').textContent = `Paso ${index + 1} de ${totalSteps}`;
     }
+    
+    // Manejo de errores de imágenes en las tarjetas
+    document.querySelectorAll('.card-image').forEach(img => {
+        img.addEventListener('error', function() {
+            this.style.display = 'none';
+            const placeholder = this.nextElementSibling;
+            if (placeholder && placeholder.classList.contains('card-image-placeholder')) {
+                placeholder.style.display = 'flex';
+            }
+        });
+    });
 });
 </script>
 {% endblock %}
